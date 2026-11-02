@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_W, GAME_H, GROUND_Y, PHYS, STEP_MS, FONT } from '../config';
 import { OBJ } from '../data/objectTypes';
 import { LEVELS } from '../levels';
+import { themeFor, outfitFor, themeTextures } from '../art/Themes';
 import type { LevelData } from '../levels/types';
 import { buildLevel, LevelWorld, Prop, Bouncer } from '../objects/LevelBuilder';
 import { Ragdoll } from '../objects/Ragdoll';
@@ -104,14 +105,17 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#0e1a40');
 
     // --- backdrop layers ---
-    const sky = this.add.image(GAME_W / 2, GAME_H / 2, 'sky').setScrollFactor(0).setDepth(-10);
-    this.add.tileSprite(-600, GROUND_Y - 290, L.width + 3000, 300, 'bg_far').setOrigin(0).setScrollFactor(0.2, 0.35).setDepth(-9);
-    this.add.tileSprite(-600, GROUND_Y - 320, L.width + 3000, 330, 'bg_near').setOrigin(0).setScrollFactor(0.5, 0.7).setDepth(-8);
-    this.add.tileSprite(-1200, GROUND_Y - 11, L.width + 2400, 120, 'ground').setOrigin(0).setDepth(2);
+    const theme = themeFor(L.id);
+    const tk = themeTextures(this, theme);
+    Ragdoll.outfit = outfitFor(L.id).id;
+    const sky = this.add.image(GAME_W / 2, GAME_H / 2, tk.sky).setScrollFactor(0).setDepth(-10);
+    this.add.tileSprite(-600, GROUND_Y - 290, L.width + 3000, 300, tk.far).setOrigin(0).setScrollFactor(0.2, 0.35).setDepth(-9);
+    this.add.tileSprite(-600, GROUND_Y - 320, L.width + 3000, 330, tk.near).setOrigin(0).setScrollFactor(0.5, 0.7).setDepth(-8);
+    this.add.tileSprite(-1200, GROUND_Y - 11, L.width + 2400, 120, tk.ground).setOrigin(0).setDepth(2);
     this.add.rectangle(-1200, GROUND_Y + 108, L.width + 2400, 900, 0x245e2a).setOrigin(0).setDepth(2);
     // red carpet from cannon to stage
     const carpet = this.add.graphics().setDepth(3);
-    carpet.fillStyle(0xb3122f, 1);
+    carpet.fillStyle(theme.carpet, 1);
     carpet.fillRect(L.cannon.x + 60, GROUND_Y + 14, L.stage.x - L.cannon.x - 40, 16);
     carpet.fillStyle(0xf4c430, 1);
     carpet.fillRect(L.cannon.x + 60, GROUND_Y + 14, L.stage.x - L.cannon.x - 40, 3);
@@ -127,7 +131,7 @@ export class GameScene extends Phaser.Scene {
     this.barrel = this.add.image(this.cannonPivot.x, this.cannonPivot.y, 'cannon_barrel').setOrigin(26 / 136, 0.5).setDepth(31);
     this.add.image(cx, GROUND_Y - 36, 'cannon_base').setDepth(32);
     const peekHead = this.add.image(0, 0, 'head_calm');
-    const peekPagdi = this.add.image(0, -17, 'pagdi');
+    const peekPagdi = this.add.image(0, -17, `pagdi_${Ragdoll.outfit}`);
     this.peek = this.add.container(0, 0, [peekHead, peekPagdi]).setDepth(30);
     this.traj = this.add.graphics().setDepth(60);
     this.setBarrelAngle(this.lastAim.angle);
@@ -181,7 +185,7 @@ export class GameScene extends Phaser.Scene {
     this.applyCamera();
     this.time.delayedCall(10, () => {
       bus.emit('hud:init', { level: L, launches: this.launchesLeft });
-      bus.emit('hud:toast', L.name, L.tip);
+      bus.emit('hud:toast', L.name, `${theme.venue} · ${L.tip}`);
     });
     this.camTween = this.tweens.add({
       targets: this.cam, x: this.aimCamX(), y: this.aimCamY(), zoom: this.fitZoom, duration: 1300, delay: 500, ease: 'Sine.inOut',

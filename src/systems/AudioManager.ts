@@ -229,7 +229,7 @@ class AudioManagerImpl {
         break;
       case 'shehnai': {
         const n = (s: number) => 523.25 * Math.pow(2, s / 12);
-        // Bhairav-flavoured fanfare: Pa Komal-Dha Ni Sa' ... Ni Sa' Komal-Re' Sa'
+        // celebratory reed fanfare
         this.reed([[n(-5), 0, 0.18], [n(-4), 0.18, 0.18], [n(-1), 0.36, 0.18], [n(0), 0.54, 0.5], [n(-1), 1.04, 0.15], [n(0), 1.19, 0.15], [n(1), 1.34, 0.2], [n(0), 1.54, 0.7]], t, 0.35, out, 1500);
         this.tone('sine', 98, 98, t, 2.0, 0.25, out, 0.05);
         break;

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_W, GAME_H, GROUND_Y, FONT } from '../config';
 import { generateCoreTextures } from '../art/Textures';
+import { makeAllOutfits, themeFor } from '../art/Themes';
 import { Button, panel, title } from '../ui/Button';
 import { SaveManager } from '../systems/SaveManager';
 import { AudioManager } from '../systems/AudioManager';
@@ -79,6 +80,7 @@ export class PreloadScene extends Phaser.Scene {
     // draw textures over a few frames so the bar moves
     this.time.delayedCall(30, () => {
       generateCoreTextures(this, (p) => { draw(p); platform.loadingProgress(p); });
+      makeAllOutfits(this);
       draw(1);
       tipText.setText(tip);
       this.time.delayedCall(250, () => {
@@ -104,8 +106,8 @@ export class TitleScene extends Phaser.Scene {
     const cx = 300;
     const barrel = this.add.image(cx + 4, GROUND_Y - 58, 'cannon_barrel').setOrigin(26 / 136, 0.5).setRotation(-0.7);
     const head = this.add.image(cx + 70, GROUND_Y - 130, 'head_happy').setRotation(0.2);
-    const pagdi = this.add.image(cx + 74, GROUND_Y - 148, 'pagdi').setRotation(0.2);
-    const arm = this.add.image(cx + 95, GROUND_Y - 132, 'arm').setOrigin(0.5, 0.1);
+    const pagdi = this.add.image(cx + 74, GROUND_Y - 148, 'pagdi_o1').setRotation(0.2);
+    const arm = this.add.image(cx + 95, GROUND_Y - 132, 'arm_o1').setOrigin(0.5, 0.1);
     this.children.bringToTop(barrel);
     this.add.image(cx, GROUND_Y - 36, 'cannon_base');
     this.tweens.add({ targets: arm, rotation: { from: -2.6, to: -1.6 }, duration: 350, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
@@ -153,10 +155,11 @@ export class LevelSelectScene extends Phaser.Scene {
       g.lineStyle(4, unlocked ? 0xf4c430 : 0x6a5f8a, 1); g.strokeRoundedRect(-cw / 2 + 7, -ch / 2 + 7, cw - 14, ch - 14, 16);
       g.lineStyle(4, 0x2a1420, 1); g.strokeRoundedRect(-cw / 2, -ch / 2, cw, ch, 22);
       const parts: Phaser.GameObjects.GameObject[] = [g];
-      parts.push(this.add.text(0, -48, `${L.id}`, { fontFamily: FONT, fontSize: '54px', color: unlocked ? '#f4c430' : '#8a80aa', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 7 }).setOrigin(0.5));
-      parts.push(this.add.text(0, 6, L.name, { fontFamily: FONT, fontSize: '21px', color: '#ffffff', fontStyle: 'bold', align: 'center', wordWrap: { width: cw - 24 } }).setOrigin(0.5));
+      parts.push(this.add.text(0, -54, `${L.id}`, { fontFamily: FONT, fontSize: '54px', color: unlocked ? '#f4c430' : '#8a80aa', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 7 }).setOrigin(0.5));
+      parts.push(this.add.text(0, 26, themeFor(L.id).venue, { fontFamily: FONT, fontSize: '14px', color: '#ffe9b8' }).setOrigin(0.5));
+      parts.push(this.add.text(0, -6, L.name, { fontFamily: FONT, fontSize: '21px', color: '#ffffff', fontStyle: 'bold', align: 'center', wordWrap: { width: cw - 24 } }).setOrigin(0.5));
       if (unlocked) {
-        for (let s = 0; s < 3; s++) parts.push(this.add.image(-36 + s * 36, 58, s < rec.stars ? 'star_full' : 'star_empty').setScale(0.48));
+        for (let s = 0; s < 3; s++) parts.push(this.add.image(-36 + s * 36, 64, s < rec.stars ? 'star_full' : 'star_empty').setScale(0.48));
       } else {
         parts.push(this.add.image(0, 62, 'lock').setScale(0.8));
       }

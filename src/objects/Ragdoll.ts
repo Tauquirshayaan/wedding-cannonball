@@ -28,7 +28,12 @@ const JOINTS: [string, [number, number], string, [number, number], number][] = [
   ['torso', [-6, 20], 'legFront', [0, -16], PHYS.jointStiffness],
 ];
 
+const OUTFIT_PARTS = ['torso', 'arm', 'leg', 'pagdi'];
+const texFor = (tex: string) => (OUTFIT_PARTS.includes(tex) ? `${tex}_${Ragdoll.outfit}` : tex);
+
 export class Ragdoll {
+  /** outfit id for the current level (textures torso_<id>, arm_<id>, ...) */
+  static outfit = 'o1';
   scene: Phaser.Scene;
   bodies: Record<string, Body> = {};
   images: Record<string, Phaser.GameObjects.Image> = {};
@@ -61,7 +66,7 @@ export class Ragdoll {
       (b as unknown as { sleepThreshold: number }).sleepThreshold = 1e9;
       this.bodies[p.key] = b;
       this.list.push(b);
-      const img = scene.add.image(px, py, p.tex).setRotation(rotation).setDepth(depthBase + p.depth);
+      const img = scene.add.image(px, py, texFor(p.tex)).setRotation(rotation).setDepth(depthBase + p.depth);
       if (p.key === 'pagdi') img.setOrigin(0.5, 0.62);
       this.images[p.key] = img;
     }
@@ -155,7 +160,7 @@ export class Ragdoll {
   }
 
   static partKeys() { return PARTS.map((p) => p.key); }
-  static partTextures() { return PARTS.map((p) => p.tex); }
+  static partTextures() { return PARTS.map((p) => texFor(p.tex)); }
 
   destroy() {
     const w = this.scene.matter.world;
