@@ -2,64 +2,64 @@
  "id": 10,
  "name": "Grand Entry",
  "tip": "Use everything to reach the top stage",
- "width": 3400,
+ "width": 2786,
  "cannon": {
   "x": 130,
   "y": 600
  },
  "stage": {
-  "x": 3000,
+  "x": 2426,
   "y": 400,
-  "w": 330
+  "w": 300
  },
  "gift": {
-  "x": 1260,
+  "x": 1034,
   "y": 150
  },
  "damageTarget": 5000,
  "objects": [
   {
    "type": "dhol",
-   "x": 720,
+   "x": 602,
    "y": 530
   },
   {
    "type": "fan",
-   "x": 1260,
+   "x": 1034,
    "y": 330,
-   "w": 380,
+   "w": 320,
    "h": 520,
    "fx": 0.7,
    "fy": -0.9
   },
   {
    "type": "rocket",
-   "x": 1800,
+   "x": 1466,
    "y": 320,
    "angle": -25
   },
   {
    "type": "relative",
-   "x": 2100,
+   "x": 1706,
    "variant": "uncle"
   },
   {
    "type": "relative",
-   "x": 2230,
+   "x": 1810,
    "variant": "aunty"
   },
   {
    "type": "cake",
-   "x": 2480
+   "x": 2010
   },
   {
    "type": "laddooPyramid",
-   "x": 2700,
+   "x": 2186,
    "count": 10
   },
   {
    "type": "block",
-   "x": 2860,
+   "x": 2314,
    "y": 520,
    "w": 140,
    "h": 140,

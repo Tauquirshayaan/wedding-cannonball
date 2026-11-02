@@ -46,17 +46,16 @@ export class GameScene extends Phaser.Scene {
   private barrel!: Phaser.GameObjects.Image;
   private peek!: Phaser.GameObjects.Container;
   private traj!: Phaser.GameObjects.Graphics;
-  private aimRing!: Phaser.GameObjects.Graphics;
+  private fitZoom = 1;
+  private flightZoom = 1;
   private cam = { x: 0, y: 0, zoom: 1 };
   private camTween: Phaser.Tweens.Tween | null = null;
-  private stageArrow!: Phaser.GameObjects.Container;
-  private tutorial: Phaser.GameObjects.Container | null = null;
+  private tutorial = false;
   private smoke!: Phaser.GameObjects.Particles.ParticleEmitter;
   private petals!: Phaser.GameObjects.Particles.ParticleEmitter;
   private confetti!: Phaser.GameObjects.Particles.ParticleEmitter;
   private frosting!: Phaser.GameObjects.Particles.ParticleEmitter;
   private sparks!: Phaser.GameObjects.Particles.ParticleEmitter;
-  private flash!: Phaser.GameObjects.Rectangle;
   private replayImgs: Record<string, Phaser.GameObjects.Image> = {};
   private replay = { t: 0, start: 0, end: 0, onDone: (() => {}) as () => void };
   private whooshCooldown = 0;
@@ -94,7 +93,7 @@ export class GameScene extends Phaser.Scene {
     this.ragdoll = null;
     this.aim.active = false;
     this.camTween = null;
-    this.tutorial = null;
+    this.tutorial = false;
     this.replayImgs = {};
     this.stuck = false;
   }
@@ -105,7 +104,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#0e1a40');
 
     // --- backdrop layers ---
-    this.add.image(GAME_W / 2, GAME_H / 2, 'sky').setScrollFactor(0).setScale(1.5).setDepth(-10);
+    const sky = this.add.image(GAME_W / 2, GAME_H / 2, 'sky').setScrollFactor(0).setDepth(-10);
     this.add.tileSprite(-600, GROUND_Y - 290, L.width + 3000, 300, 'bg_far').setOrigin(0).setScrollFactor(0.2, 0.35).setDepth(-9);
     this.add.tileSprite(-600, GROUND_Y - 320, L.width + 3000, 330, 'bg_near').setOrigin(0).setScrollFactor(0.5, 0.7).setDepth(-8);
     this.add.tileSprite(-1200, GROUND_Y - 11, L.width + 2400, 120, 'ground').setOrigin(0).setDepth(2);
@@ -117,6 +116,9 @@ export class GameScene extends Phaser.Scene {
     carpet.fillStyle(0xf4c430, 1);
     carpet.fillRect(L.cannon.x + 60, GROUND_Y + 14, L.stage.x - L.cannon.x - 40, 3);
 
+    // sky must cover the view even fully zoomed out
+    const minZoom = Math.min(1, GAME_W / (L.stage.x + L.stage.w + 90)) * 0.85;
+    sky.setScale(1.15 / minZoom);
     this.world = buildLevel(this, L);
 
     // --- cannon ---
@@ -128,7 +130,6 @@ export class GameScene extends Phaser.Scene {
     const peekPagdi = this.add.image(0, -17, 'pagdi');
     this.peek = this.add.container(0, 0, [peekHead, peekPagdi]).setDepth(30);
     this.traj = this.add.graphics().setDepth(60);
-    this.aimRing = this.add.graphics().setDepth(61).setScrollFactor(0);
     this.setBarrelAngle(this.lastAim.angle);
 
     // --- effects ---
@@ -137,15 +138,6 @@ export class GameScene extends Phaser.Scene {
     this.confetti = this.add.particles(0, 0, 'px_confetti', { lifespan: 2400, speed: { min: 200, max: 600 }, angle: { min: 220, max: 320 }, gravityY: 500, rotate: { min: 0, max: 360 }, emitting: false, tint: [0xf7a21b, 0xe6197e, 0xf4c430, 0x3e9b3a, 0x6ad1ff] }).setDepth(72);
     this.frosting = this.add.particles(0, 0, 'px_frost', { lifespan: 1200, speed: { min: 100, max: 320 }, gravityY: 600, scale: { start: 1.2, end: 0.6 }, emitting: false, tint: [0xfff3d6, 0xf48fb1] }).setDepth(71);
     this.sparks = this.add.particles(0, 0, 'px_glow', { lifespan: 500, speed: { min: 100, max: 400 }, scale: { start: 0.5, end: 0 }, blendMode: 'ADD', emitting: false, tint: [0xffd36b, 0xff7b2e] }).setDepth(71);
-    this.flash = this.add.rectangle(0, 0, GAME_W * 2, GAME_H * 2, 0xffffff, 0).setOrigin(0).setScrollFactor(0).setDepth(200);
-
-    // off-screen stage indicator
-    const arrowBg = this.add.graphics();
-    arrowBg.fillStyle(0x2a1420, 0.8); arrowBg.fillRoundedRect(-118, -26, 140, 52, 16);
-    arrowBg.fillStyle(0xf4c430, 1); arrowBg.fillTriangle(22, -18, 42, 0, 22, 18);
-    const arrowTxt = this.add.text(-48, 0, 'STAGE', { fontFamily: FONT, fontSize: '22px', color: '#f4c430', fontStyle: 'bold' }).setOrigin(0.5);
-    this.stageArrow = this.add.container(GAME_W - 60, 400, [arrowBg, arrowTxt]).setScrollFactor(0).setDepth(150).setVisible(false);
-    this.tweens.add({ targets: this.stageArrow, x: GAME_W - 48, duration: 500, yoyo: true, repeat: -1 });
 
     // --- physics events ---
     this.matter.world.on('collisionstart', (ev: Phaser.Physics.Matter.Events.CollisionStartEvent) => this.onCollide(ev));
@@ -180,22 +172,26 @@ export class GameScene extends Phaser.Scene {
     platform.gameplayStart();
 
     // --- intro pan: stage -> cannon ---
+    // whole level (cannon to stage) fits on one screen while aiming
+    const right = L.stage.x + L.stage.w + 90;
+    this.fitZoom = Math.min(1, GAME_W / right);
+    this.flightZoom = Math.min(1, this.fitZoom * 1.45);
     const stageCx = L.stage.x + L.stage.w / 2;
-    this.cam.x = stageCx; this.cam.y = this.aimCamY();
+    this.cam.x = stageCx; this.cam.y = L.stage.y - 120; this.cam.zoom = 1;
     this.applyCamera();
     this.time.delayedCall(10, () => {
       bus.emit('hud:init', { level: L, launches: this.launchesLeft });
       bus.emit('hud:toast', L.name, L.tip);
     });
     this.camTween = this.tweens.add({
-      targets: this.cam, x: this.aimCamX(), duration: L.width > GAME_W ? 1500 : 600, delay: 400, ease: 'Sine.inOut',
+      targets: this.cam, x: this.aimCamX(), y: this.aimCamY(), zoom: this.fitZoom, duration: 1300, delay: 500, ease: 'Sine.inOut',
       onComplete: () => this.enterAim(),
     });
   }
 
   // ---------------- camera ----------------
-  private aimCamX() { return Math.max(GAME_W / 2, this.level.cannon.x + 470); }
-  private aimCamY() { return GAME_H / 2; }
+  private aimCamX() { return (this.level.stage.x + this.level.stage.w + 90) / 2; }
+  private aimCamY() { return GAME_H - GAME_H / 2 / this.fitZoom; }
 
   private applyCamera() {
     const c = this.cameras.main;
@@ -204,7 +200,7 @@ export class GameScene extends Phaser.Scene {
     const halfW = GAME_W / 2 / z, halfH = GAME_H / 2 / z;
     const w = this.level.width;
     const x = w < halfW * 2 ? w / 2 : Phaser.Math.Clamp(this.cam.x, halfW, w - halfW);
-    const y = Phaser.Math.Clamp(this.cam.y, -900 + halfH, GAME_H - halfH);
+    const y = Phaser.Math.Clamp(this.cam.y, -1600 + halfH, GAME_H - halfH);
     c.centerOn(x, y);
   }
 
@@ -223,7 +219,7 @@ export class GameScene extends Phaser.Scene {
     this.aim.active = true;
     this.aim.sx = p.x; this.aim.sy = p.y;
     this.aim.valid = false;
-    if (this.tutorial) { this.tutorial.destroy(); this.tutorial = null; }
+    if (this.tutorial) { this.tutorial = false; bus.emit('hud:tutorial', false); }
   }
 
   private onMove(p: Phaser.Input.Pointer) {
@@ -247,7 +243,7 @@ export class GameScene extends Phaser.Scene {
     this.onMove(p);
     this.aim.active = false;
     this.traj.clear();
-    this.aimRing.clear();
+    bus.emit('hud:aim', null);
     bus.emit('hud:power', null);
     if (this.state !== 'aim') return;
     if (!this.aim.valid) { this.cancelAim(); return; }
@@ -257,7 +253,7 @@ export class GameScene extends Phaser.Scene {
   private cancelAim() {
     this.aim.active = false;
     this.traj.clear();
-    this.aimRing.clear();
+    bus.emit('hud:aim', null);
     bus.emit('hud:power', null);
     this.setBarrelAngle(this.lastAim.angle);
   }
@@ -269,7 +265,7 @@ export class GameScene extends Phaser.Scene {
 
   private skipIntro() {
     if (this.camTween) { this.camTween.stop(); this.camTween = null; }
-    this.cam.x = this.aimCamX();
+    this.cam.x = this.aimCamX(); this.cam.y = this.aimCamY(); this.cam.zoom = this.fitZoom;
     this.enterAim();
   }
 
@@ -288,14 +284,7 @@ export class GameScene extends Phaser.Scene {
   private drawAim(p: Phaser.Input.Pointer) {
     const g = this.traj;
     g.clear();
-    const ring = this.aimRing;
-    ring.clear();
-    ring.lineStyle(3, 0xffffff, 0.5);
-    ring.strokeCircle(this.aim.sx, this.aim.sy, 22);
-    ring.lineStyle(4, 0xffffff, 0.35);
-    ring.lineBetween(this.aim.sx, this.aim.sy, p.x, p.y);
-    ring.fillStyle(0xffffff, 0.6);
-    ring.fillCircle(p.x, p.y, 10);
+    bus.emit('hud:aim', { sx: this.aim.sx, sy: this.aim.sy, px: p.x, py: p.y, valid: this.aim.valid, angle: this.aim.angle, power: this.aim.power });
     if (!this.aim.valid) { bus.emit('hud:power', null); return; }
     bus.emit('hud:power', this.aim.power);
     // dotted preview of the first 25% of the arc
@@ -316,7 +305,7 @@ export class GameScene extends Phaser.Scene {
     for (let i = 0; i < Math.min(show, pts.length); i++) {
       const a = 1 - i / show;
       g.fillStyle(0xffffff, 0.35 + a * 0.6);
-      g.fillCircle(pts[i].x, pts[i].y, 3 + a * 4);
+      g.fillCircle(pts[i].x, pts[i].y, (3 + a * 4) / Math.max(0.55, this.cam.zoom));
     }
   }
 
@@ -330,30 +319,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   private showTutorial() {
-    const hand = this.add.graphics();
-    hand.fillStyle(0xffffff, 0.9); hand.fillCircle(0, 0, 20);
-    hand.lineStyle(4, 0x2a1420, 1); hand.strokeCircle(0, 0, 20);
-    const txt = this.add.text(0, -70, 'Drag back & release\nto fire Lucky!', {
-      fontFamily: FONT, fontSize: '30px', color: '#ffffff', fontStyle: 'bold', align: 'center', stroke: '#2a1420', strokeThickness: 7,
-    }).setOrigin(0.5);
-    const line = this.add.graphics();
-    this.tutorial = this.add.container(0, 0, [line, hand, txt]).setScrollFactor(0).setDepth(160);
-    const sx = 620, sy = 420;
-    const proxy = { t: 0 };
-    txt.setPosition(sx - 60, sy - 110);
-    this.tweens.add({
-      targets: proxy, t: 1, duration: 1300, repeat: -1, repeatDelay: 400, ease: 'Sine.inOut',
-      onUpdate: () => {
-        const hx = sx - 150 * proxy.t, hy = sy + 110 * proxy.t;
-        hand.setPosition(hx, hy);
-        line.clear(); line.lineStyle(5, 0xffffff, 0.5); line.lineBetween(sx, sy, hx, hy);
-      },
-    });
+    this.tutorial = true;
+    bus.emit('hud:tutorial', true);
   }
 
   private launch(angle: number, power: number) {
     this.lastAim = { angle, power };
-    if (this.tutorial) { this.tutorial.destroy(); this.tutorial = null; }
+    if (this.tutorial) { this.tutorial = false; bus.emit('hud:tutorial', false); }
     if (!SaveManager.data.tutorialDone) { SaveManager.data.tutorialDone = true; SaveManager.persist(); }
     this.launchesLeft--;
     this.launchIndex++;
@@ -419,7 +391,7 @@ export class GameScene extends Phaser.Scene {
       bus.emit('hud:toast', msg, '');
       this.time.delayedCall(this.testSteps ? 10 : 900, () => {
         if (this.state !== 'between') return;
-        this.camTween = this.tweens.add({ targets: this.cam, x: this.aimCamX(), y: this.aimCamY(), zoom: 1, duration: this.testSteps ? 10 : 700, ease: 'Sine.inOut', onComplete: () => this.enterAim() });
+        this.camTween = this.tweens.add({ targets: this.cam, x: this.aimCamX(), y: this.aimCamY(), zoom: this.fitZoom, duration: this.testSteps ? 10 : 700, ease: 'Sine.inOut', onComplete: () => this.enterAim() });
       });
     } else {
       this.levelFail();
@@ -484,7 +456,7 @@ export class GameScene extends Phaser.Scene {
 
   private pauseGame() {
     if (!this.scene.isActive('Game') || this.state === 'done' || this.state === 'ending' || this.state === 'replay') return;
-    this.aim.active = false; this.traj.clear(); this.aimRing.clear();
+    this.aim.active = false; this.traj.clear(); bus.emit('hud:aim', null);
     platform.gameplayStop();
     this.scene.pause();
     this.scene.launch('Pause', { levelId: this.level.id });
@@ -533,7 +505,7 @@ export class GameScene extends Phaser.Scene {
     const torso = this.replayImgs.torso;
     this.cam.x += (torso.x - this.cam.x) * 0.15;
     this.cam.y += (torso.y - this.cam.y) * 0.15;
-    this.cam.zoom += (1.15 - this.cam.zoom) * 0.08;
+    this.cam.zoom += (Math.min(1.15, this.flightZoom * 1.2) - this.cam.zoom) * 0.08;
     this.applyCamera();
   }
 
@@ -634,7 +606,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateCamera(dt: number) {
-    if (this.camTween || this.state === 'intro') { this.applyCamera(); this.updateStageArrow(); return; }
+    if (this.camTween || this.state === 'intro') { this.applyCamera(); return; }
     const k = 1 - Math.pow(1 - 0.1, dt / STEP_MS);
     if ((this.state === 'flight' || this.state === 'between' || this.state === 'ending') && this.ragdoll) {
       const t = this.ragdoll.torso.position;
@@ -642,23 +614,14 @@ export class GameScene extends Phaser.Scene {
       const lead = Phaser.Math.Clamp(this.ragdoll.torso.velocity.x * 6, -120, 200);
       this.cam.x += (t.x + lead - this.cam.x) * k;
       this.cam.y += (t.y - this.cam.y) * k;
-      const zt = this.state === 'flight' ? 1 - 0.15 * Phaser.Math.Clamp((speed - 10) / 16, 0, 1) : 1;
+      const zt = this.flightZoom * (this.state === 'flight' ? 1 - 0.15 * Phaser.Math.Clamp((speed - 10) / 16, 0, 1) : 1);
       this.cam.zoom += (zt - this.cam.zoom) * k * 0.5;
     } else if (this.state === 'aim') {
       this.cam.x += (this.aimCamX() - this.cam.x) * k;
       this.cam.y += (this.aimCamY() - this.cam.y) * k;
-      this.cam.zoom += (1 - this.cam.zoom) * k;
+      this.cam.zoom += (this.fitZoom - this.cam.zoom) * k;
     }
     this.applyCamera();
-    this.updateStageArrow();
-  }
-
-  private updateStageArrow() {
-    const c = this.cameras.main;
-    const sx = this.level.stage.x;
-    const visible = this.state === 'aim' && sx > c.worldView.right - 40;
-    this.stageArrow.setVisible(visible);
-    if (visible) this.stageArrow.y = Phaser.Math.Clamp(this.level.stage.y - c.worldView.y - 40, 140, GAME_H - 120);
   }
 
   // ---------------- interactions ----------------
@@ -730,8 +693,7 @@ export class GameScene extends Phaser.Scene {
     this.recorder.mark(prop.value / 250 + impact / 8);
     if (prop.type === 'photographer') {
       this.hitStopMs = Math.max(this.hitStopMs, OBJ.photographer.flashFreezeMs);
-      this.flash.setAlpha(0.85);
-      this.tweens.add({ targets: this.flash, alpha: 0, duration: 260 });
+      bus.emit('hud:flash');
       this.popText(x, y - 90, 'Say cheese!', '#ffffff', 26);
     } else if (prop.type === 'relative') {
       this.popText(x, y - 90, 'Arre!', '#ff9ad0', 34);
@@ -796,6 +758,7 @@ export class GameScene extends Phaser.Scene {
 
   private popText(x: number, y: number, text: string, color: string, size: number) {
     if (this.testSteps) return;
+    size = Math.round(size * Math.min(1.8, 1 / this.cam.zoom));
     const t = this.add.text(x, y, text, {
       fontFamily: FONT, fontSize: `${size}px`, color, fontStyle: 'bold', stroke: '#2a1420', strokeThickness: Math.max(4, size / 5),
     }).setOrigin(0.5).setDepth(120).setScale(0.4);

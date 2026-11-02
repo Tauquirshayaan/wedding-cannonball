@@ -94,6 +94,42 @@ export class HudScene extends Phaser.Scene {
     on('hud:power', (p: number | null) => this.drawPower(p));
     on('hud:flail', () => this.flailHint.setAlpha(0));
     on('hud:hide', () => this.root.setVisible(false));
+    const aimG = this.add.graphics();
+    const aimTxt = this.add.text(0, 0, '', { fontFamily: FONT, fontSize: '20px', color: '#ffffff', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 5 }).setOrigin(0.5).setVisible(false);
+    on('hud:aim', (d: { sx: number; sy: number; px: number; py: number; valid: boolean; angle: number; power: number } | null) => {
+      aimG.clear();
+      if (!d) { aimTxt.setVisible(false); return; }
+      aimG.lineStyle(3, 0xffffff, 0.55); aimG.strokeCircle(d.sx, d.sy, 24);
+      aimG.lineStyle(5, 0xffffff, 0.35); aimG.lineBetween(d.sx, d.sy, d.px, d.py);
+      aimG.fillStyle(d.valid ? 0xf4c430 : 0xffffff, 0.85); aimG.fillCircle(d.px, d.py, 12);
+      aimTxt.setVisible(true).setPosition(d.px, d.py + 34).setText(d.valid ? `${Math.round(d.angle)}°  ·  ${Math.round(d.power * 100)}%` : 'Release to cancel');
+    });
+    const flash = this.add.rectangle(0, 0, GAME_W, 720, 0xffffff, 0).setOrigin(0);
+    on('hud:flash', () => { flash.setAlpha(0.85); this.tweens.add({ targets: flash, alpha: 0, duration: 260 }); });
+    let tut: Phaser.GameObjects.Container | null = null;
+    on('hud:tutorial', (show: boolean) => {
+      tut?.destroy(); tut = null;
+      if (!show) return;
+      const hand = this.add.graphics();
+      hand.fillStyle(0xffffff, 0.9); hand.fillCircle(0, 0, 20);
+      hand.lineStyle(4, 0x2a1420, 1); hand.strokeCircle(0, 0, 20);
+      const sx = 640, sy = 400;
+      const txt = this.add.text(sx - 60, sy - 110, 'Drag back & release\nto fire Lucky!', {
+        fontFamily: FONT, fontSize: '32px', color: '#ffffff', fontStyle: 'bold', align: 'center', stroke: '#2a1420', strokeThickness: 7,
+      }).setOrigin(0.5);
+      const line = this.add.graphics();
+      tut = this.add.container(0, 0, [line, hand, txt]);
+      const proxy = { t: 0 };
+      this.tweens.add({
+        targets: proxy, t: 1, duration: 1300, repeat: -1, repeatDelay: 400, ease: 'Sine.inOut',
+        onUpdate: () => {
+          if (!tut) return;
+          const hx = sx - 150 * proxy.t, hy = sy + 110 * proxy.t;
+          hand.setPosition(hx, hy);
+          line.clear(); line.lineStyle(5, 0xffffff, 0.5); line.lineBetween(sx, sy, hx, hy);
+        },
+      });
+    });
     let replayUi: Phaser.GameObjects.Container | null = null;
     on('hud:replay', (total: number) => {
       this.root.setVisible(false);

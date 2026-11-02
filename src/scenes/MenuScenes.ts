@@ -28,12 +28,31 @@ function backdrop(scene: Phaser.Scene, dim = 0) {
 }
 
 function soundToggle(scene: Phaser.Scene, x: number, y: number) {
-  const b = new Button(scene, x, y, AudioManager.isMuted() ? '🔇' : '🔊', () => {
+  const icon = scene.add.graphics();
+  const draw = () => {
+    const m = AudioManager.isMuted();
+    icon.clear();
+    icon.fillStyle(0xffffff, 1);
+    icon.fillRect(-14, -7, 9, 14);
+    icon.fillTriangle(-6, -7, 6, -16, 6, 16);
+    icon.fillTriangle(-6, -7, -6, 7, 6, 16);
+    icon.lineStyle(3.5, 0xffffff, 1);
+    if (m) {
+      icon.lineBetween(11, -7, 23, 7); icon.lineBetween(23, -7, 11, 7);
+    } else {
+      icon.beginPath(); icon.arc(8, 0, 8, -0.9, 0.9); icon.strokePath();
+      icon.beginPath(); icon.arc(8, 0, 15, -0.9, 0.9); icon.strokePath();
+    }
+  };
+  const b = new Button(scene, x, y, '', () => {
     const m = !AudioManager.isMuted();
     AudioManager.setMuted(m);
     SaveManager.data.muted = m; SaveManager.persist();
-    b.setText(m ? '🔇' : '🔊');
+    draw();
   }, { w: 64, h: 64, size: 28, color: 0x7a1c2e });
+  icon.setPosition(-3, -2);
+  b.add(icon);
+  draw();
   return b;
 }
 
@@ -256,7 +275,7 @@ export class ResultScene extends Phaser.Scene {
       if (d.badge) {
         const bg = this.add.graphics();
         bg.fillStyle(0xf4c430, 1); bg.fillRoundedRect(GAME_W / 2 - 130, 420, 260, 40, 20);
-        this.add.text(GAME_W / 2, 440, `🏅 ${d.badge}`, { fontFamily: FONT, fontSize: '22px', color: '#2a1420', fontStyle: 'bold' }).setOrigin(0.5);
+        this.add.text(GAME_W / 2, 440, `★ ${d.badge} ★`, { fontFamily: FONT, fontSize: '22px', color: '#2a1420', fontStyle: 'bold' }).setOrigin(0.5);
       }
     } else {
       this.add.text(GAME_W / 2, 400, 'Land Lucky on the stage within 3 launches.', { fontFamily: FONT, fontSize: '22px', color: '#ffffff' }).setOrigin(0.5);
