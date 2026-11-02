@@ -16,7 +16,7 @@
   "x": 1000,
   "y": 190
  },
- "damageTarget": 8000,
+ "damageTarget": 800,
  "objects": [
   {
    "type": "block",

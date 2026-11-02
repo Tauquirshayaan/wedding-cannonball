@@ -16,7 +16,7 @@
   "x": 1250,
   "y": 230
  },
- "damageTarget": 8000,
+ "damageTarget": 1200,
  "objects": [
   {
    "type": "vat",
@@ -39,6 +39,16 @@
    "type": "laddooPyramid",
    "x": 600,
    "count": 10
+  },
+  {
+   "type": "relative",
+   "x": 420,
+   "variant": "uncle"
+  },
+  {
+   "type": "photographer",
+   "x": 700,
+   "walkRange": 160
   }
  ]
 }

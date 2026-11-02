@@ -16,7 +16,7 @@
   "x": 1260,
   "y": 150
  },
- "damageTarget": 15000,
+ "damageTarget": 5000,
  "objects": [
   {
    "type": "dhol",

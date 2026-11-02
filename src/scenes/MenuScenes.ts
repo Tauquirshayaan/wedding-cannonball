@@ -64,7 +64,11 @@ export class PreloadScene extends Phaser.Scene {
       tipText.setText(tip);
       this.time.delayedCall(250, () => {
         platform.loadingDone();
-        this.scene.start('Title');
+        // ?level=N jumps straight into a level (handy for phone testing)
+        let jump = 0;
+        try { jump = Number(new URLSearchParams(window.location.search).get('level')) || 0; } catch { /* ignore */ }
+        if (jump >= 1 && jump <= LEVELS.length) this.scene.start('Game', { levelId: jump });
+        else this.scene.start('Title');
       });
     });
   }
@@ -131,11 +135,11 @@ export class LevelSelectScene extends Phaser.Scene {
       g.lineStyle(4, 0x2a1420, 1); g.strokeRoundedRect(-cw / 2, -ch / 2, cw, ch, 22);
       const parts: Phaser.GameObjects.GameObject[] = [g];
       parts.push(this.add.text(0, -48, `${L.id}`, { fontFamily: FONT, fontSize: '54px', color: unlocked ? '#f4c430' : '#8a80aa', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 7 }).setOrigin(0.5));
-      parts.push(this.add.text(0, 12, L.name, { fontFamily: FONT, fontSize: '21px', color: '#ffffff', fontStyle: 'bold', align: 'center', wordWrap: { width: cw - 24 } }).setOrigin(0.5));
+      parts.push(this.add.text(0, 6, L.name, { fontFamily: FONT, fontSize: '21px', color: '#ffffff', fontStyle: 'bold', align: 'center', wordWrap: { width: cw - 24 } }).setOrigin(0.5));
       if (unlocked) {
         for (let s = 0; s < 3; s++) parts.push(this.add.image(-36 + s * 36, 58, s < rec.stars ? 'star_full' : 'star_empty').setScale(0.48));
       } else {
-        parts.push(this.add.image(0, 58, 'lock'));
+        parts.push(this.add.image(0, 62, 'lock').setScale(0.8));
       }
       const card = this.add.container(x, y, parts).setSize(cw, ch);
       if (unlocked) {

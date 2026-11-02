@@ -16,7 +16,7 @@
   "x": 1300,
   "y": 170
  },
- "damageTarget": 7000,
+ "damageTarget": 5000,
  "objects": [
   {
    "type": "relative",

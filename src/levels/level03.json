@@ -16,7 +16,7 @@
   "x": 1000,
   "y": 300
  },
- "damageTarget": 4000,
+ "damageTarget": 1500,
  "objects": [
   {
    "type": "photographer",
