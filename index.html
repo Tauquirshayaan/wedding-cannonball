@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0e1a40" />
+    <meta name="description" content="Human Cannonball: Wedding Edition — fire Lucky, the late wedding guest, across a chaotic Indian wedding and land on the stage!" />
+    <title>Human Cannonball: Wedding Edition</title>
+    <style>
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #0e1a40; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+      #game { position: fixed; inset: 0; }
+      #game canvas { display: block; }
+      #rotate { display: none; position: fixed; inset: 0; z-index: 10; background: #0e1a40; color: #f4c430; font: bold 22px 'Trebuchet MS', Verdana, sans-serif; text-align: center; align-items: center; justify-content: center; flex-direction: column; gap: 18px; }
+      #rotate .phone { width: 46px; height: 80px; border: 5px solid #f7a21b; border-radius: 10px; animation: rot 1.6s ease-in-out infinite; }
+      @keyframes rot { 0%, 30% { transform: rotate(0deg); } 60%, 100% { transform: rotate(90deg); } }
+      @media (orientation: portrait) and (pointer: coarse) { body.need-landscape #rotate { display: flex; } }
+    </style>
+  </head>
+  <body class="need-landscape">
+    <div id="game"></div>
+    <div id="rotate"><div class="phone"></div><div>Rotate your phone<br />to join the wedding!</div></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

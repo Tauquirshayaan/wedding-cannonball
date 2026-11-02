@@ -1,0 +1,813 @@
+import Phaser from 'phaser';
+import { GAME_W, GAME_H, GROUND_Y, PHYS, STEP_MS, FONT } from '../config';
+import { OBJ } from '../data/objectTypes';
+import { LEVELS } from '../levels';
+import type { LevelData } from '../levels/types';
+import { buildLevel, LevelWorld, Prop, Bouncer } from '../objects/LevelBuilder';
+import { Ragdoll } from '../objects/Ragdoll';
+import { DamageTracker, rupees } from '../systems/DamageTracker';
+import { ReplayRecorder } from '../systems/ReplayRecorder';
+import { AudioManager } from '../systems/AudioManager';
+import { SaveManager } from '../systems/SaveManager';
+import { Analytics } from '../systems/Analytics';
+import { bus } from '../systems/bus';
+import { platform } from '../platform/Platform';
+
+type State = 'intro' | 'aim' | 'flight' | 'between' | 'ending' | 'replay' | 'done';
+
+export interface ResultData {
+  levelId: number; cleared: boolean; stars: number; damage: number; score: number; launchesLeft: number;
+  gift: boolean; newBest: boolean; badge: string | null; target: number; hasGift: boolean;
+}
+
+const POP_LINES = ['DHAMAKA!', 'Arre bhai!', 'Bas karo!', 'Oye hoye!', 'Kya baat!', 'Hatt ja!'];
+
+export class GameScene extends Phaser.Scene {
+  level!: LevelData;
+  world!: LevelWorld;
+  ragdoll: Ragdoll | null = null;
+  state: State = 'intro';
+  launchesLeft = PHYS.launchesPerLevel;
+  launchIndex = -1;
+  damage = new DamageTracker();
+  recorder = new ReplayRecorder();
+  private best: { frames: Float32Array[]; win: { start: number; end: number }; score: number } | null = null;
+  physTime = 0;
+  private acc = 0;
+  private hitStopMs = 0;
+  private flightMs = 0;
+  private stillMs = 0;
+  private stageStillMs = 0;
+  private flailUsed = false;
+  private stuck = false;
+  private aim = { active: false, sx: 0, sy: 0, angle: 45, power: 0, valid: false };
+  private lastAim = { angle: 40, power: 0.75 };
+  private cannonPivot = new Phaser.Math.Vector2();
+  private barrel!: Phaser.GameObjects.Image;
+  private peek!: Phaser.GameObjects.Container;
+  private traj!: Phaser.GameObjects.Graphics;
+  private aimRing!: Phaser.GameObjects.Graphics;
+  private cam = { x: 0, y: 0, zoom: 1 };
+  private camTween: Phaser.Tweens.Tween | null = null;
+  private stageArrow!: Phaser.GameObjects.Container;
+  private tutorial: Phaser.GameObjects.Container | null = null;
+  private smoke!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private petals!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private confetti!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private frosting!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private sparks!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private flash!: Phaser.GameObjects.Rectangle;
+  private replayImgs: Record<string, Phaser.GameObjects.Image> = {};
+  private replay = { t: 0, start: 0, end: 0, onDone: (() => {}) as () => void };
+  private whooshCooldown = 0;
+  /** automated tests: physics steps per frame regardless of real time */
+  testSteps = 0;
+  private hudHandlers: [string, (...a: unknown[]) => void][] = [];
+
+  constructor() {
+    super({
+      key: 'Game',
+      physics: {
+        default: 'matter',
+        matter: {
+          gravity: { x: 0, y: PHYS.gravityY },
+          autoUpdate: false,
+          enableSleeping: true,
+          positionIterations: PHYS.positionIterations,
+          velocityIterations: PHYS.velocityIterations,
+          debug: false,
+        },
+      },
+    });
+  }
+
+  init(data: { levelId?: number }) {
+    const id = Phaser.Math.Clamp(data.levelId ?? 1, 1, LEVELS.length);
+    this.level = LEVELS[id - 1];
+    this.state = 'intro';
+    this.launchesLeft = PHYS.launchesPerLevel;
+    this.launchIndex = -1;
+    this.damage = new DamageTracker();
+    this.recorder = new ReplayRecorder();
+    this.best = null;
+    this.physTime = 0; this.acc = 0; this.hitStopMs = 0;
+    this.ragdoll = null;
+    this.aim.active = false;
+    this.camTween = null;
+    this.tutorial = null;
+    this.replayImgs = {};
+    this.stuck = false;
+  }
+
+  create() {
+    const L = this.level;
+    (window as unknown as { __hcScene: GameScene }).__hcScene = this;
+    this.cameras.main.setBackgroundColor('#0e1a40');
+
+    // --- backdrop layers ---
+    this.add.image(GAME_W / 2, GAME_H / 2, 'sky').setScrollFactor(0).setScale(1.5).setDepth(-10);
+    this.add.tileSprite(-600, GROUND_Y - 290, L.width + 3000, 300, 'bg_far').setOrigin(0).setScrollFactor(0.2, 0.35).setDepth(-9);
+    this.add.tileSprite(-600, GROUND_Y - 320, L.width + 3000, 330, 'bg_near').setOrigin(0).setScrollFactor(0.5, 0.7).setDepth(-8);
+    this.add.tileSprite(-1200, GROUND_Y - 11, L.width + 2400, 120, 'ground').setOrigin(0).setDepth(2);
+    this.add.rectangle(-1200, GROUND_Y + 108, L.width + 2400, 900, 0x245e2a).setOrigin(0).setDepth(2);
+    // red carpet from cannon to stage
+    const carpet = this.add.graphics().setDepth(3);
+    carpet.fillStyle(0xb3122f, 1);
+    carpet.fillRect(L.cannon.x + 60, GROUND_Y + 14, L.stage.x - L.cannon.x - 40, 16);
+    carpet.fillStyle(0xf4c430, 1);
+    carpet.fillRect(L.cannon.x + 60, GROUND_Y + 14, L.stage.x - L.cannon.x - 40, 3);
+
+    this.world = buildLevel(this, L);
+
+    // --- cannon ---
+    const cx = L.cannon.x;
+    this.cannonPivot.set(cx + 4, GROUND_Y - 58);
+    this.barrel = this.add.image(this.cannonPivot.x, this.cannonPivot.y, 'cannon_barrel').setOrigin(26 / 136, 0.5).setDepth(31);
+    this.add.image(cx, GROUND_Y - 36, 'cannon_base').setDepth(32);
+    const peekHead = this.add.image(0, 0, 'head_calm');
+    const peekPagdi = this.add.image(0, -17, 'pagdi');
+    this.peek = this.add.container(0, 0, [peekHead, peekPagdi]).setDepth(30);
+    this.traj = this.add.graphics().setDepth(60);
+    this.aimRing = this.add.graphics().setDepth(61).setScrollFactor(0);
+    this.setBarrelAngle(this.lastAim.angle);
+
+    // --- effects ---
+    this.smoke = this.add.particles(0, 0, 'px_smoke', { lifespan: 900, speed: { min: 40, max: 200 }, scale: { start: 0.9, end: 2.4 }, alpha: { start: 0.8, end: 0 }, emitting: false }).setDepth(70);
+    this.petals = this.add.particles(0, 0, 'px_petal', { lifespan: 1100, speed: { min: 80, max: 260 }, gravityY: 400, rotate: { min: 0, max: 360 }, scale: { min: 0.7, max: 1.3 }, emitting: false, tint: [0xf7a21b, 0xf4c430, 0xe6197e] }).setDepth(71);
+    this.confetti = this.add.particles(0, 0, 'px_confetti', { lifespan: 2400, speed: { min: 200, max: 600 }, angle: { min: 220, max: 320 }, gravityY: 500, rotate: { min: 0, max: 360 }, emitting: false, tint: [0xf7a21b, 0xe6197e, 0xf4c430, 0x3e9b3a, 0x6ad1ff] }).setDepth(72);
+    this.frosting = this.add.particles(0, 0, 'px_frost', { lifespan: 1200, speed: { min: 100, max: 320 }, gravityY: 600, scale: { start: 1.2, end: 0.6 }, emitting: false, tint: [0xfff3d6, 0xf48fb1] }).setDepth(71);
+    this.sparks = this.add.particles(0, 0, 'px_glow', { lifespan: 500, speed: { min: 100, max: 400 }, scale: { start: 0.5, end: 0 }, blendMode: 'ADD', emitting: false, tint: [0xffd36b, 0xff7b2e] }).setDepth(71);
+    this.flash = this.add.rectangle(0, 0, GAME_W * 2, GAME_H * 2, 0xffffff, 0).setOrigin(0).setScrollFactor(0).setDepth(200);
+
+    // off-screen stage indicator
+    const arrowBg = this.add.graphics();
+    arrowBg.fillStyle(0x2a1420, 0.8); arrowBg.fillRoundedRect(-118, -26, 140, 52, 16);
+    arrowBg.fillStyle(0xf4c430, 1); arrowBg.fillTriangle(22, -18, 42, 0, 22, 18);
+    const arrowTxt = this.add.text(-48, 0, 'STAGE', { fontFamily: FONT, fontSize: '22px', color: '#f4c430', fontStyle: 'bold' }).setOrigin(0.5);
+    this.stageArrow = this.add.container(GAME_W - 60, 400, [arrowBg, arrowTxt]).setScrollFactor(0).setDepth(150).setVisible(false);
+    this.tweens.add({ targets: this.stageArrow, x: GAME_W - 48, duration: 500, yoyo: true, repeat: -1 });
+
+    // --- physics events ---
+    this.matter.world.on('collisionstart', (ev: Phaser.Physics.Matter.Events.CollisionStartEvent) => this.onCollide(ev));
+
+    // --- input ---
+    this.input.mouse?.disableContextMenu();
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => this.onDown(p));
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => this.onMove(p));
+    this.input.on('pointerup', (p: Phaser.Input.Pointer) => this.onUp(p));
+    this.input.on('pointerupoutside', (p: Phaser.Input.Pointer) => this.onUp(p));
+    const kb = this.input.keyboard;
+    kb?.on('keydown-SPACE', () => this.skip());
+    kb?.on('keydown-R', () => this.restart());
+    kb?.on('keydown-ESC', () => this.pauseGame());
+    kb?.on('keydown-P', () => this.pauseGame());
+
+    // --- HUD ---
+    this.scene.launch('Hud', { levelId: L.id });
+    this.scene.bringToTop('Hud');
+    const on = (e: string, fn: (...a: unknown[]) => void) => { bus.on(e, fn); this.hudHandlers.push([e, fn]); };
+    on('hud:pause', () => this.pauseGame());
+    on('hud:restart', () => this.restart());
+    this.events.once('shutdown', () => {
+      for (const [e, fn] of this.hudHandlers) bus.off(e, fn);
+      this.hudHandlers = [];
+      this.tweens.killAll();
+    });
+    this.game.events.on('hidden', this.onHidden, this);
+    this.events.once('shutdown', () => this.game.events.off('hidden', this.onHidden, this));
+
+    Analytics.track('level_start', { level: L.id });
+    platform.gameplayStart();
+
+    // --- intro pan: stage -> cannon ---
+    const stageCx = L.stage.x + L.stage.w / 2;
+    this.cam.x = stageCx; this.cam.y = this.aimCamY();
+    this.applyCamera();
+    this.time.delayedCall(10, () => {
+      bus.emit('hud:init', { level: L, launches: this.launchesLeft });
+      bus.emit('hud:toast', L.name, L.tip);
+    });
+    this.camTween = this.tweens.add({
+      targets: this.cam, x: this.aimCamX(), duration: L.width > GAME_W ? 1500 : 600, delay: 400, ease: 'Sine.inOut',
+      onComplete: () => this.enterAim(),
+    });
+  }
+
+  // ---------------- camera ----------------
+  private aimCamX() { return Math.max(GAME_W / 2, this.level.cannon.x + 470); }
+  private aimCamY() { return GAME_H / 2; }
+
+  private applyCamera() {
+    const c = this.cameras.main;
+    const z = this.cam.zoom;
+    c.setZoom(z);
+    const halfW = GAME_W / 2 / z, halfH = GAME_H / 2 / z;
+    const w = this.level.width;
+    const x = w < halfW * 2 ? w / 2 : Phaser.Math.Clamp(this.cam.x, halfW, w - halfW);
+    const y = Phaser.Math.Clamp(this.cam.y, -900 + halfH, GAME_H - halfH);
+    c.centerOn(x, y);
+  }
+
+  // ---------------- input ----------------
+  private inHudZone(p: Phaser.Input.Pointer) {
+    return p.y < 96 && (p.x < 360 || p.x > GAME_W - 200);
+  }
+
+  private onDown(p: Phaser.Input.Pointer) {
+    if (this.state === 'intro') { this.skipIntro(); return; }
+    if (this.state === 'replay') { this.finishReplay(); return; }
+    if (this.state === 'flight') { this.tryFlail(); return; }
+    if (this.state !== 'aim') return;
+    if (p.rightButtonDown()) { this.cancelAim(); return; }
+    if (this.inHudZone(p)) return;
+    this.aim.active = true;
+    this.aim.sx = p.x; this.aim.sy = p.y;
+    this.aim.valid = false;
+    if (this.tutorial) { this.tutorial.destroy(); this.tutorial = null; }
+  }
+
+  private onMove(p: Phaser.Input.Pointer) {
+    if (!this.aim.active || this.state !== 'aim') return;
+    if (p.rightButtonDown()) { this.cancelAim(); return; }
+    const vx = this.aim.sx - p.x, vy = this.aim.sy - p.y;
+    const len = Math.hypot(vx, vy);
+    this.aim.valid = len >= 24;
+    if (this.aim.valid) {
+      let a = Phaser.Math.RadToDeg(Math.atan2(-vy, vx));
+      if (a < -90) a = 80; // dragged forward-down: treat as steep
+      this.aim.angle = Phaser.Math.Clamp(a, PHYS.minAngle, PHYS.maxAngle);
+      this.aim.power = Phaser.Math.Clamp(len / PHYS.dragForFullPower, 0.12, 1);
+      this.setBarrelAngle(this.aim.angle);
+    }
+    this.drawAim(p);
+  }
+
+  private onUp(p: Phaser.Input.Pointer) {
+    if (!this.aim.active) return;
+    this.onMove(p);
+    this.aim.active = false;
+    this.traj.clear();
+    this.aimRing.clear();
+    bus.emit('hud:power', null);
+    if (this.state !== 'aim') return;
+    if (!this.aim.valid) { this.cancelAim(); return; }
+    this.launch(this.aim.angle, this.aim.power);
+  }
+
+  private cancelAim() {
+    this.aim.active = false;
+    this.traj.clear();
+    this.aimRing.clear();
+    bus.emit('hud:power', null);
+    this.setBarrelAngle(this.lastAim.angle);
+  }
+
+  private skip() {
+    if (this.state === 'intro') this.skipIntro();
+    else if (this.state === 'replay') this.finishReplay();
+  }
+
+  private skipIntro() {
+    if (this.camTween) { this.camTween.stop(); this.camTween = null; }
+    this.cam.x = this.aimCamX();
+    this.enterAim();
+  }
+
+  private setBarrelAngle(deg: number) {
+    const r = Phaser.Math.DegToRad(-deg);
+    this.barrel.setRotation(r);
+    const m = this.muzzle(deg, 92);
+    this.peek.setPosition(m.x, m.y).setRotation(r + Math.PI / 2);
+  }
+
+  private muzzle(deg: number, dist = 104) {
+    const r = Phaser.Math.DegToRad(deg);
+    return { x: this.cannonPivot.x + Math.cos(r) * dist, y: this.cannonPivot.y - Math.sin(r) * dist };
+  }
+
+  private drawAim(p: Phaser.Input.Pointer) {
+    const g = this.traj;
+    g.clear();
+    const ring = this.aimRing;
+    ring.clear();
+    ring.lineStyle(3, 0xffffff, 0.5);
+    ring.strokeCircle(this.aim.sx, this.aim.sy, 22);
+    ring.lineStyle(4, 0xffffff, 0.35);
+    ring.lineBetween(this.aim.sx, this.aim.sy, p.x, p.y);
+    ring.fillStyle(0xffffff, 0.6);
+    ring.fillCircle(p.x, p.y, 10);
+    if (!this.aim.valid) { bus.emit('hud:power', null); return; }
+    bus.emit('hud:power', this.aim.power);
+    // dotted preview of the first 25% of the arc
+    const r = Phaser.Math.DegToRad(this.aim.angle);
+    const v = this.aim.power * PHYS.maxLaunchSpeed;
+    let vx = Math.cos(r) * v, vy = -Math.sin(r) * v;
+    const m = this.muzzle(this.aim.angle);
+    let x = m.x, y = m.y;
+    const gStep = PHYS.gravityY * 0.001 * STEP_MS * STEP_MS;
+    const pts: { x: number; y: number }[] = [];
+    for (let i = 0; i < 400; i++) {
+      vx *= 1 - PHYS.airFriction; vy = vy * (1 - PHYS.airFriction) + gStep;
+      x += vx; y += vy;
+      if (i % 3 === 0) pts.push({ x, y });
+      if (y > GROUND_Y || x > this.level.width) break;
+    }
+    const show = Math.max(7, Math.ceil(pts.length * 0.25));
+    for (let i = 0; i < Math.min(show, pts.length); i++) {
+      const a = 1 - i / show;
+      g.fillStyle(0xffffff, 0.35 + a * 0.6);
+      g.fillCircle(pts[i].x, pts[i].y, 3 + a * 4);
+    }
+  }
+
+  // ---------------- flow ----------------
+  private enterAim() {
+    this.camTween = null;
+    this.state = 'aim';
+    this.peek.setVisible(true);
+    this.setBarrelAngle(this.lastAim.angle);
+    if (this.launchIndex < 0 && this.level.id === 1 && !SaveManager.data.tutorialDone && !this.tutorial) this.showTutorial();
+  }
+
+  private showTutorial() {
+    const hand = this.add.graphics();
+    hand.fillStyle(0xffffff, 0.9); hand.fillCircle(0, 0, 20);
+    hand.lineStyle(4, 0x2a1420, 1); hand.strokeCircle(0, 0, 20);
+    const txt = this.add.text(0, -70, 'Drag back & release\nto fire Lucky!', {
+      fontFamily: FONT, fontSize: '30px', color: '#ffffff', fontStyle: 'bold', align: 'center', stroke: '#2a1420', strokeThickness: 7,
+    }).setOrigin(0.5);
+    const line = this.add.graphics();
+    this.tutorial = this.add.container(0, 0, [line, hand, txt]).setScrollFactor(0).setDepth(160);
+    const sx = 620, sy = 420;
+    const proxy = { t: 0 };
+    txt.setPosition(sx - 60, sy - 110);
+    this.tweens.add({
+      targets: proxy, t: 1, duration: 1300, repeat: -1, repeatDelay: 400, ease: 'Sine.inOut',
+      onUpdate: () => {
+        const hx = sx - 150 * proxy.t, hy = sy + 110 * proxy.t;
+        hand.setPosition(hx, hy);
+        line.clear(); line.lineStyle(5, 0xffffff, 0.5); line.lineBetween(sx, sy, hx, hy);
+      },
+    });
+  }
+
+  private launch(angle: number, power: number) {
+    this.lastAim = { angle, power };
+    if (this.tutorial) { this.tutorial.destroy(); this.tutorial = null; }
+    if (!SaveManager.data.tutorialDone) { SaveManager.data.tutorialDone = true; SaveManager.persist(); }
+    this.launchesLeft--;
+    this.launchIndex++;
+    this.damage.newLaunch();
+    this.recorder.clear();
+    this.flightMs = 0; this.stillMs = 0; this.stageStillMs = 0;
+    this.flailUsed = false; this.stuck = false;
+    if (this.ragdoll) { this.ragdoll.destroy(); this.ragdoll = null; }
+    for (const r of this.world.rockets) {
+      r.flyTween?.stop();
+      r.armed = true;
+      r.img.setPosition(r.x, r.y).setAlpha(1).setRotation(Phaser.Math.DegToRad(r.angle + 90));
+      r.glow.setVisible(true);
+    }
+    const rad = Phaser.Math.DegToRad(angle);
+    const dir = { x: Math.cos(rad), y: -Math.sin(rad) };
+    const m = this.muzzle(angle, 96);
+    this.ragdoll = new Ragdoll(this, m.x, m.y, Math.atan2(dir.y, dir.x) + Math.PI / 2);
+    const v = power * PHYS.maxLaunchSpeed;
+    this.ragdoll.setVelocity(dir.x * v, dir.y * v);
+    this.ragdoll.setFace('scared');
+    this.ragdoll.sync();
+    this.peek.setVisible(false);
+    this.setBarrelAngle(angle);
+    // juice
+    AudioManager.play('boom');
+    const mz = this.muzzle(angle, 120);
+    this.smoke.explode(18, mz.x, mz.y);
+    this.sparks.explode(14, mz.x, mz.y);
+    this.cameras.main.shake(180, 0.012);
+    this.tweens.add({ targets: this.barrel, x: this.cannonPivot.x - dir.x * 14, y: this.cannonPivot.y - dir.y * 14, duration: 70, yoyo: true });
+    this.state = 'flight';
+    bus.emit('hud:launches', this.launchesLeft);
+    Analytics.track('launch', { level: this.level.id, angle: Math.round(angle), power: Math.round(power * 100) });
+  }
+
+  private tryFlail() {
+    if (this.flailUsed || !this.ragdoll || this.stuck) return;
+    this.flailUsed = true;
+    this.ragdoll.push(0, -PHYS.flailNudge);
+    this.ragdoll.flail();
+    AudioManager.play('flail');
+    const t = this.ragdoll.torso.position;
+    this.petals.explode(8, t.x, t.y);
+    this.popText(t.x, t.y - 40, 'Rukooo!', '#ffffff', 26);
+    bus.emit('hud:flail');
+  }
+
+  private endLaunch() {
+    if (this.state !== 'flight' || !this.ragdoll) return;
+    const t = this.ragdoll.torso.position;
+    const win = !this.stuck && this.world.stageZone.contains(t.x, t.y);
+    // keep the best crash for the replay
+    const score = this.recorder.score() + (win ? 5 : 0);
+    if (this.recorder.frames.length > 10 && (!this.best || score >= this.best.score)) {
+      this.best = { frames: this.recorder.frames, win: this.recorder.window(), score };
+    }
+    this.state = 'between';
+    if (win) { this.levelClear(); return; }
+    this.ragdoll.setFace('dizzy');
+    if (this.launchesLeft > 0) {
+      const msg = this.stuck ? 'Chashni mein phas gaye!' : this.launchesLeft === 1 ? 'Missed! Last launch!' : 'Missed! Try again';
+      bus.emit('hud:toast', msg, '');
+      this.time.delayedCall(this.testSteps ? 10 : 900, () => {
+        if (this.state !== 'between') return;
+        this.camTween = this.tweens.add({ targets: this.cam, x: this.aimCamX(), y: this.aimCamY(), zoom: 1, duration: this.testSteps ? 10 : 700, ease: 'Sine.inOut', onComplete: () => this.enterAim() });
+      });
+    } else {
+      this.levelFail();
+    }
+  }
+
+  private levelClear() {
+    this.state = 'ending';
+    const L = this.level;
+    const r = this.ragdoll!;
+    r.setFace('happy');
+    const gift = !!this.world.gift?.collected;
+    const launchesUsed = PHYS.launchesPerLevel - this.launchesLeft;
+    let stars = 1;
+    if (this.damage.total >= L.damageTarget) stars++;
+    if (L.gift ? gift : launchesUsed === 1) stars++;
+    const score = this.damage.total + 1000 * this.launchesLeft + (gift ? 500 : 0);
+    let badge: string | null = null;
+    if (this.damage.total < 500) badge = 'Shareef Guest';
+    if (this.damage.total >= L.damageTarget * 2) badge = 'Baraat Wrecker';
+    if (launchesUsed === 1) badge = badge === 'Baraat Wrecker' ? badge : 'Ek Shot';
+    const newBest = SaveManager.record(L.id, true, stars, score);
+    Analytics.track('level_clear', { level: L.id, stars, damage: this.damage.total, launches_used: launchesUsed });
+    if (stars === 3) platform.happyTime();
+    let totalBest = 0;
+    for (const k in SaveManager.data.levels) totalBest += SaveManager.data.levels[k].best;
+    platform.sendScore(totalBest);
+    AudioManager.play('shehnai');
+    const t = r.torso.position;
+    this.confetti.explode(90, t.x, t.y - 40);
+    this.time.delayedCall(250, () => this.confetti.explode(60, L.stage.x + L.stage.w / 2, L.stage.y - 150));
+    this.popText(t.x, t.y - 90, 'PAHUNCH GAYE!', '#f4c430', 46);
+    const data: ResultData = { levelId: L.id, cleared: true, stars, damage: this.damage.total, score, launchesLeft: this.launchesLeft, gift, newBest, badge, target: L.damageTarget, hasGift: !!L.gift };
+    this.time.delayedCall(this.testSteps ? 10 : 1300, () => this.startReplay(() => this.showResult(data)));
+  }
+
+  private levelFail() {
+    this.state = 'ending';
+    const L = this.level;
+    SaveManager.record(L.id, false, 0, 0);
+    Analytics.track('level_fail', { level: L.id, damage: this.damage.total });
+    AudioManager.play('sad');
+    bus.emit('hud:toast', 'Shaadi miss ho gayi!', 'Out of launches');
+    const data: ResultData = { levelId: L.id, cleared: false, stars: 0, damage: this.damage.total, score: 0, launchesLeft: 0, gift: !!this.world.gift?.collected, newBest: false, badge: null, target: L.damageTarget, hasGift: !!L.gift };
+    this.time.delayedCall(this.testSteps ? 10 : 1400, () => this.startReplay(() => this.showResult(data)));
+  }
+
+  private showResult(data: ResultData) {
+    this.state = 'done';
+    platform.gameplayStop();
+    bus.emit('hud:hide');
+    (window as unknown as { __hcResult: ResultData }).__hcResult = data;
+    this.scene.launch('Result', data);
+    this.scene.bringToTop('Result');
+  }
+
+  restart() {
+    if (this.scene.isActive('Result') || this.scene.isActive('Pause')) return;
+    Analytics.track('retry', { level: this.level.id });
+    this.scene.restart({ levelId: this.level.id });
+  }
+
+  private pauseGame() {
+    if (!this.scene.isActive('Game') || this.state === 'done' || this.state === 'ending' || this.state === 'replay') return;
+    this.aim.active = false; this.traj.clear(); this.aimRing.clear();
+    platform.gameplayStop();
+    this.scene.pause();
+    this.scene.launch('Pause', { levelId: this.level.id });
+    this.scene.bringToTop('Pause');
+  }
+
+  private onHidden() {
+    if (this.scene.isActive() && (this.state === 'aim' || this.state === 'flight' || this.state === 'between')) this.pauseGame();
+  }
+
+  // ---------------- replay ----------------
+  private startReplay(onDone: () => void) {
+    if (!this.best || this.testSteps) { onDone(); return; }
+    this.state = 'replay';
+    AudioManager.duck(true);
+    const keys = Ragdoll.partKeys();
+    const texs = Ragdoll.partTextures();
+    if (this.ragdoll) for (const k in this.ragdoll.images) this.ragdoll.images[k].setVisible(false);
+    keys.forEach((k, i) => {
+      const tex = k === 'head' ? 'head_scared' : texs[i];
+      this.replayImgs[k] = this.add.image(0, 0, tex).setDepth(40 + i);
+      if (k === 'pagdi') this.replayImgs[k].setOrigin(0.5, 0.62);
+    });
+    this.replay = { t: this.best.win.start, start: this.best.win.start, end: this.best.win.end, onDone };
+    bus.emit('hud:replay', this.damage.total);
+    this.applyReplayFrame(this.replay.t);
+  }
+
+  private applyReplayFrame(t: number) {
+    const frames = this.best!.frames;
+    const i = Math.floor(t);
+    const f = t - i;
+    const a = frames[Math.min(i, frames.length - 1)];
+    const b = frames[Math.min(i + 1, frames.length - 1)];
+    const keys = Ragdoll.partKeys();
+    const lerpAngle = (x: number, y: number) => x + Phaser.Math.Angle.Wrap(y - x) * f;
+    keys.forEach((k, n) => {
+      const o = n * 3;
+      this.replayImgs[k].setPosition(a[o] + (b[o] - a[o]) * f, a[o + 1] + (b[o + 1] - a[o + 1]) * f).setRotation(lerpAngle(a[o + 2], b[o + 2]));
+    });
+    let o = keys.length * 3;
+    for (const img of this.world.movables) {
+      if (o + 2 < a.length) img.setPosition(a[o] + (b[o] - a[o]) * f, a[o + 1] + (b[o + 1] - a[o + 1]) * f).setRotation(lerpAngle(a[o + 2], b[o + 2]));
+      o += 3;
+    }
+    const torso = this.replayImgs.torso;
+    this.cam.x += (torso.x - this.cam.x) * 0.15;
+    this.cam.y += (torso.y - this.cam.y) * 0.15;
+    this.cam.zoom += (1.15 - this.cam.zoom) * 0.08;
+    this.applyCamera();
+  }
+
+  private finishReplay() {
+    if (this.state !== 'replay') return;
+    this.state = 'ending';
+    AudioManager.duck(false);
+    bus.emit('hud:replayEnd');
+    this.replay.onDone();
+  }
+
+  // ---------------- physics ----------------
+  update(_time: number, delta: number) {
+    const dt = Math.min(delta, 100);
+    // decorative motion
+    for (const f of this.world.fans) f.blades.rotation += dt * 0.02;
+    this.whooshCooldown -= dt;
+
+    if (this.state === 'replay') {
+      this.replay.t += (dt / STEP_MS) * 0.35;
+      if (this.replay.t >= this.replay.end) { this.applyReplayFrame(this.replay.end); this.finishReplay(); return; }
+      this.applyReplayFrame(this.replay.t);
+      return;
+    }
+
+    let steps = 0;
+    if (this.testSteps > 0) {
+      for (let i = 0; i < this.testSteps; i++) { this.stepOnce(); }
+    } else {
+      if (this.hitStopMs > 0) { this.hitStopMs -= dt; }
+      else {
+        this.acc += dt;
+        while (this.acc >= STEP_MS && steps < 4) { this.stepOnce(); this.acc -= STEP_MS; steps++; }
+        if (steps >= 4) this.acc = 0;
+      }
+    }
+    this.syncVisuals();
+    this.updateCamera(dt);
+  }
+
+  private stepOnce() {
+    if (this.state === 'done' || this.state === 'ending' && !this.ragdoll) return;
+    this.physTime += STEP_MS;
+    for (const p of this.world.props) p.update?.(STEP_MS, this.physTime);
+    const r = this.ragdoll;
+    const flying = this.state === 'flight' && r && !this.stuck;
+    if (flying) {
+      const t = r.torso.position;
+      for (const f of this.world.fans) {
+        if (f.rect.contains(t.x, t.y)) r.push(f.fx * OBJ.fan.strength, f.fy * OBJ.fan.strength);
+      }
+    }
+    this.matter.world.step(STEP_MS);
+    if (!r) return;
+    r.capVelocity(PHYS.velocityCap);
+    if (this.state !== 'flight') return;
+    this.flightMs += STEP_MS;
+    const t = r.torso.position;
+    if (!this.stuck) {
+      // rockets
+      for (const rk of this.world.rockets) {
+        if (rk.armed && Phaser.Math.Distance.Between(t.x, t.y, rk.x, rk.y) < OBJ.rocket.radius) this.fireRocket(rk);
+      }
+      // gift
+      const g = this.world.gift;
+      if (g && !g.collected) {
+        for (const b of [r.torso, r.bodies.head]) {
+          if (Phaser.Math.Distance.Between(b.position.x, b.position.y, g.x, g.y) < OBJ.gift.radius + 14) { this.collectGift(); break; }
+        }
+      }
+      // chashni vat
+      for (const v of this.world.vats) {
+        if (v.rect.contains(t.x, t.y)) { this.stickInVat(); break; }
+      }
+    }
+    // whoosh on fast flight
+    if (r.torso.speed > 20 && this.whooshCooldown <= 0) { AudioManager.play('whoosh', r.torso.speed / 25); this.whooshCooldown = 700; }
+    // record replay frame
+    const snap: number[] = [];
+    r.snapshot(snap);
+    for (const img of this.world.movables) snap.push(img.x, img.y, img.rotation);
+    this.recorder.push(snap);
+    // settle rule
+    const speed = r.torso.speed;
+    this.stillMs = speed < PHYS.settleSpeed ? this.stillMs + STEP_MS : 0;
+    const onStage = this.world.stageZone.contains(t.x, t.y);
+    this.stageStillMs = onStage && speed < 0.9 ? this.stageStillMs + STEP_MS : 0;
+    const out = t.x < -150 || t.x > this.level.width + 150 || t.y > GROUND_Y + 300;
+    if (this.stuck && this.flightMs > 600) this.endLaunch();
+    else if (this.stillMs >= PHYS.settleMs || this.stageStillMs >= 600 || this.flightMs >= PHYS.maxLaunchMs || out) this.endLaunch();
+  }
+
+  private syncVisuals() {
+    this.ragdoll?.sync();
+    for (const p of this.world.props) {
+      if (p.movable && !p.body.isStatic) p.img.setPosition(p.body.position.x, p.body.position.y).setRotation(p.body.angle);
+    }
+  }
+
+  private updateCamera(dt: number) {
+    if (this.camTween || this.state === 'intro') { this.applyCamera(); this.updateStageArrow(); return; }
+    const k = 1 - Math.pow(1 - 0.1, dt / STEP_MS);
+    if ((this.state === 'flight' || this.state === 'between' || this.state === 'ending') && this.ragdoll) {
+      const t = this.ragdoll.torso.position;
+      const speed = this.ragdoll.torso.speed;
+      const lead = Phaser.Math.Clamp(this.ragdoll.torso.velocity.x * 6, -120, 200);
+      this.cam.x += (t.x + lead - this.cam.x) * k;
+      this.cam.y += (t.y - this.cam.y) * k;
+      const zt = this.state === 'flight' ? 1 - 0.15 * Phaser.Math.Clamp((speed - 10) / 16, 0, 1) : 1;
+      this.cam.zoom += (zt - this.cam.zoom) * k * 0.5;
+    } else if (this.state === 'aim') {
+      this.cam.x += (this.aimCamX() - this.cam.x) * k;
+      this.cam.y += (this.aimCamY() - this.cam.y) * k;
+      this.cam.zoom += (1 - this.cam.zoom) * k;
+    }
+    this.applyCamera();
+    this.updateStageArrow();
+  }
+
+  private updateStageArrow() {
+    const c = this.cameras.main;
+    const sx = this.level.stage.x;
+    const visible = this.state === 'aim' && sx > c.worldView.right - 40;
+    this.stageArrow.setVisible(visible);
+    if (visible) this.stageArrow.y = Phaser.Math.Clamp(this.level.stage.y - c.worldView.y - 40, 140, GAME_H - 120);
+  }
+
+  // ---------------- interactions ----------------
+  private onCollide(ev: Phaser.Physics.Matter.Events.CollisionStartEvent) {
+    const r = this.ragdoll;
+    for (const pair of ev.pairs) {
+      const a = pair.bodyA.parent, b = pair.bodyB.parent;
+      const rel = Math.hypot(a.velocity.x - b.velocity.x, a.velocity.y - b.velocity.y);
+      const ra = !!r && r.isPart(a), rb = !!r && r.isPart(b);
+      if (ra || rb) {
+        if (ra && rb) continue;
+        const part = ra ? a : b, other = ra ? b : a;
+        if (this.state !== 'flight' || this.stuck) continue;
+        const bouncer = this.world.bouncers.get(other.id);
+        if (bouncer) this.bounce(bouncer, rel);
+        const prop = this.world.bodyProp.get(other.id);
+        if (rel > PHYS.shakeSpeed) this.bigImpact(part.position.x, part.position.y, rel, !!prop || !!bouncer);
+        if (prop) this.score(prop, rel, part.position);
+        else if (rel > 6 && !bouncer) AudioManager.play('crash', rel / 16);
+      } else if (this.state === 'flight') {
+        const pa = this.world.bodyProp.get(a.id), pb = this.world.bodyProp.get(b.id);
+        if (!pa && !pb) continue;
+        if (pa && (!a.isStatic || pb)) this.score(pa, rel, b.position);
+        if (pb && (!b.isStatic || pa)) this.score(pb, rel, a.position);
+      }
+    }
+  }
+
+  private bigImpact(x: number, y: number, rel: number, onProp: boolean) {
+    const r = this.ragdoll!;
+    this.cameras.main.shake(120, Math.min(0.012, 0.003 + rel * 0.0004));
+    this.petals.explode(Math.min(14, 4 + Math.round(rel / 2)), x, y);
+    if (rel > PHYS.hitStopSpeed && onProp) this.hitStopMs = 60;
+    if (rel > 9 && r.loseTurban()) {
+      this.popText(x, y - 60, 'Pagdi gayi!', '#ff9ad0', 24);
+      this.recorder.mark(2);
+    }
+    this.recorder.mark(rel / 6);
+  }
+
+  private bounce(b: Bouncer, rel: number) {
+    const r = this.ragdoll!;
+    const cooldown = b.kind === 'dhol' ? OBJ.dhol.cooldownMs : OBJ.canopy.cooldownMs;
+    if (this.physTime - b.lastMs < cooldown) return;
+    b.lastMs = this.physTime;
+    const v = r.averageVelocity();
+    const vy = -Math.min(22, b.speed + Math.abs(v.y) * 0.25);
+    const vx = Phaser.Math.Clamp(v.x * 0.85, -16, 16) + (Math.abs(v.x) < 2 ? 2 : 0);
+    r.setVelocity(vx, vy);
+    AudioManager.play(b.kind === 'dhol' ? 'dhol' : 'bounce');
+    this.tweens.add({ targets: b.img, scaleY: 0.78, scaleX: 1.12, duration: 70, yoyo: true, ease: 'Quad.out' });
+    this.petals.explode(10, b.body.position.x, b.body.position.y - 30);
+    this.recorder.mark(3);
+    if (b.kind === 'dhol') this.popText(b.body.position.x, b.body.position.y - 70, 'DHUM!', '#ffd36b', 30);
+    // the hit itself always scores, even at low speed
+    this.score(b.prop, Math.max(rel, b.prop.hitSpeed + 0.1), r.torso.position);
+  }
+
+  private score(prop: Prop, impact: number, from: { x: number; y: number }) {
+    if (this.state !== 'flight') return;
+    if (impact < prop.hitSpeed) return;
+    if (prop.scoredLaunch === this.launchIndex) return;
+    prop.scoredLaunch = this.launchIndex;
+    prop.onHit?.(impact, from);
+    const res = this.damage.hit(prop.value, this.physTime);
+    const x = prop.body.position.x, y = prop.body.position.y;
+    this.popText(x, y - 40, `+${rupees(res.value)}`, prop.value >= 800 ? '#ffd36b' : '#ffffff', prop.value >= 800 ? 30 : 20);
+    AudioManager.play(prop.sound, impact / 12);
+    this.recorder.mark(prop.value / 250 + impact / 8);
+    if (prop.type === 'photographer') {
+      this.hitStopMs = Math.max(this.hitStopMs, OBJ.photographer.flashFreezeMs);
+      this.flash.setAlpha(0.85);
+      this.tweens.add({ targets: this.flash, alpha: 0, duration: 260 });
+      this.popText(x, y - 90, 'Say cheese!', '#ffffff', 26);
+    } else if (prop.type === 'relative') {
+      this.popText(x, y - 90, 'Arre!', '#ff9ad0', 34);
+      AudioManager.play('ohh');
+    } else if (prop.type === 'cake') {
+      this.frosting.explode(24, x, y);
+    }
+    if (res.chain >= 2) {
+      const big = res.mult >= PHYS.comboMax;
+      bus.emit('hud:combo', res.mult, big);
+      AudioManager.play('combo', 1 + res.chain * 0.08);
+      if (big && res.chain === 5) { AudioManager.play('ohh'); this.popText(x, y - 130, Phaser.Utils.Array.GetRandom(POP_LINES), '#ff4d6d', 40); }
+    }
+    bus.emit('hud:damage', this.damage.total, res.value);
+  }
+
+  private fireRocket(rk: { x: number; y: number; angle: number; img: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; armed: boolean; flyTween?: Phaser.Tweens.Tween }) {
+    rk.armed = false;
+    const r = this.ragdoll!;
+    const rad = Phaser.Math.DegToRad(rk.angle);
+    r.setVelocity(Math.cos(rad) * OBJ.rocket.boostSpeed, Math.sin(rad) * OBJ.rocket.boostSpeed);
+    r.flail();
+    AudioManager.play('whistle');
+    this.sparks.explode(30, rk.x, rk.y);
+    this.smoke.explode(8, rk.x, rk.y);
+    rk.glow.setVisible(false);
+    rk.flyTween = this.tweens.add({ targets: rk.img, x: rk.x + Math.cos(rad) * 900, y: rk.y + Math.sin(rad) * 900, alpha: 0, duration: 900 });
+    const res = this.damage.hit(OBJ.rocket.damage, this.physTime);
+    bus.emit('hud:damage', this.damage.total, res.value);
+    if (res.chain >= 2) bus.emit('hud:combo', res.mult, res.mult >= PHYS.comboMax);
+    this.popText(rk.x, rk.y - 60, 'PATAKHA!', '#ff9a3c', 34);
+    this.cameras.main.shake(200, 0.01);
+    this.recorder.mark(6);
+  }
+
+  private collectGift() {
+    const g = this.world.gift!;
+    g.collected = true;
+    AudioManager.play('gift');
+    this.sparks.explode(20, g.x, g.y);
+    this.tweens.killTweensOf(g.img);
+    g.glow.setVisible(false);
+    this.tweens.add({ targets: g.img, y: g.y - 80, scale: 1.6, alpha: 0, duration: 600, ease: 'Back.in' });
+    this.popText(g.x, g.y - 50, 'Shagun mila!', '#7dff9a', 30);
+    bus.emit('hud:gift');
+    this.recorder.mark(4);
+  }
+
+  private stickInVat() {
+    const r = this.ragdoll!;
+    this.stuck = true;
+    r.freeze();
+    r.setFace('dizzy');
+    AudioManager.play('splat');
+    const t = r.torso.position;
+    this.frosting.explode(18, t.x, t.y);
+    const res = this.damage.hit(OBJ.vat.damage, this.physTime);
+    bus.emit('hud:damage', this.damage.total, res.value);
+    this.popText(t.x, t.y - 70, `Sticky! ${rupees(OBJ.vat.damage).replace('₹-', '-₹')}`, '#ffb347', 30);
+    this.recorder.mark(3);
+  }
+
+  private popText(x: number, y: number, text: string, color: string, size: number) {
+    if (this.testSteps) return;
+    const t = this.add.text(x, y, text, {
+      fontFamily: FONT, fontSize: `${size}px`, color, fontStyle: 'bold', stroke: '#2a1420', strokeThickness: Math.max(4, size / 5),
+    }).setOrigin(0.5).setDepth(120).setScale(0.4);
+    this.tweens.add({ targets: t, scale: 1, duration: 160, ease: 'Back.out' });
+    this.tweens.add({ targets: t, y: y - 60, alpha: 0, delay: 500, duration: 600, onComplete: () => t.destroy() });
+  }
+
+  // ---------------- test hooks ----------------
+  testLaunch(angle: number, power: number) {
+    if (this.state === 'intro') this.skipIntro();
+    if (this.state !== 'aim') return false;
+    this.launch(angle, power);
+    return true;
+  }
+}

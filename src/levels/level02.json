@@ -1,0 +1,36 @@
+{
+ "id": 2,
+ "name": "Dhol Bounce",
+ "tip": "Hit the dhol to fly higher",
+ "width": 1800,
+ "cannon": {
+  "x": 130,
+  "y": 600
+ },
+ "stage": {
+  "x": 1430,
+  "y": 360,
+  "w": 300
+ },
+ "gift": {
+  "x": 1180,
+  "y": 300
+ },
+ "damageTarget": 2500,
+ "objects": [
+  {
+   "type": "laddooPyramid",
+   "x": 700,
+   "count": 10
+  },
+  {
+   "type": "sofa",
+   "x": 480
+  },
+  {
+   "type": "dhol",
+   "x": 1080,
+   "y": 530
+  }
+ ]
+}

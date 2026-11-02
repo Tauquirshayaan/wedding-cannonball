@@ -1,0 +1,46 @@
+{
+ "id": 9,
+ "name": "Cake Tower",
+ "tip": "Topple the cake tower for huge damage",
+ "width": 2200,
+ "cannon": {
+  "x": 130,
+  "y": 600
+ },
+ "stage": {
+  "x": 1820,
+  "y": 600,
+  "w": 320
+ },
+ "gift": {
+  "x": 1380,
+  "y": 420
+ },
+ "damageTarget": 12000,
+ "objects": [
+  {
+   "type": "laddooPyramid",
+   "x": 700,
+   "count": 10
+  },
+  {
+   "type": "photographer",
+   "x": 950,
+   "walkRange": 180
+  },
+  {
+   "type": "cake",
+   "x": 1220
+  },
+  {
+   "type": "photographer",
+   "x": 1500,
+   "walkRange": 160
+  },
+  {
+   "type": "laddooPyramid",
+   "x": 1640,
+   "count": 6
+  }
+ ]
+}

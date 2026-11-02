@@ -1,0 +1,46 @@
+{
+ "id": 4,
+ "name": "Pankha Power",
+ "tip": "The fan blows Lucky up and over",
+ "width": 1900,
+ "cannon": {
+  "x": 130,
+  "y": 600
+ },
+ "stage": {
+  "x": 1440,
+  "y": 600,
+  "w": 320
+ },
+ "gift": {
+  "x": 1100,
+  "y": 260
+ },
+ "damageTarget": 3500,
+ "objects": [
+  {
+   "type": "sofa",
+   "x": 600
+  },
+  {
+   "type": "pillar",
+   "x": 1360,
+   "w": 70,
+   "h": 420
+  },
+  {
+   "type": "fan",
+   "x": 1100,
+   "y": 330,
+   "w": 360,
+   "h": 520,
+   "fx": 0.6,
+   "fy": -1.0
+  },
+  {
+   "type": "laddooPyramid",
+   "x": 850,
+   "count": 10
+  }
+ ]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "human-cannonball-wedding",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build",
+    "build:web": "vite build --mode web",
+    "build:single": "vite build --mode single",
+    "build:poki": "vite build --mode poki",
+    "build:crazygames": "vite build --mode crazygames",
+    "build:youtube": "vite build --mode youtube",
+    "build:all": "npm run typecheck && npm run build:web && npm run build:single && npm run build:poki && npm run build:crazygames && npm run build:youtube && node scripts/package.mjs",
+    "preview": "vite preview --host"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^6.4.5",
+    "vite-plugin-singlefile": "^2.3.4"
+  }
+}

@@ -1,0 +1,48 @@
+{
+ "id": 6,
+ "name": "Uncle Dance Floor",
+ "tip": "Bounce off the shamiana canopy",
+ "width": 2200,
+ "cannon": {
+  "x": 130,
+  "y": 600
+ },
+ "stage": {
+  "x": 1820,
+  "y": 600,
+  "w": 320
+ },
+ "gift": {
+  "x": 1300,
+  "y": 170
+ },
+ "damageTarget": 7000,
+ "objects": [
+  {
+   "type": "relative",
+   "x": 600,
+   "variant": "uncle"
+  },
+  {
+   "type": "relative",
+   "x": 720,
+   "variant": "aunty"
+  },
+  {
+   "type": "relative",
+   "x": 840,
+   "variant": "uncle"
+  },
+  {
+   "type": "relative",
+   "x": 960,
+   "variant": "aunty"
+  },
+  {
+   "type": "canopy",
+   "x": 1300,
+   "y": 430,
+   "w": 360
+  }
+ ]
+}

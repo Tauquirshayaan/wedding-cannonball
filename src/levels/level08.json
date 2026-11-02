@@ -1,0 +1,54 @@
+{
+ "id": 8,
+ "name": "Shagun Delivery",
+ "tip": "The gift is on the high ledge. Use the dhol!",
+ "width": 2000,
+ "cannon": {
+  "x": 130,
+  "y": 600
+ },
+ "stage": {
+  "x": 1560,
+  "y": 600,
+  "w": 320
+ },
+ "gift": {
+  "x": 1000,
+  "y": 190
+ },
+ "damageTarget": 8000,
+ "objects": [
+  {
+   "type": "block",
+   "x": 1000,
+   "y": 230,
+   "w": 170,
+   "h": 30,
+   "style": "ledge"
+  },
+  {
+   "type": "dhol",
+   "x": 780,
+   "y": 540
+  },
+  {
+   "type": "block",
+   "x": 1330,
+   "y": 330,
+   "w": 130,
+   "h": 330,
+   "style": "giftTable"
+  },
+  {
+   "type": "laddooPyramid",
+   "x": 1330,
+   "y": 330,
+   "count": 10
+  },
+  {
+   "type": "photographer",
+   "x": 520,
+   "walkRange": 200
+  }
+ ]
+}

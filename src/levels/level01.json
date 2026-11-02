@@ -1,0 +1,28 @@
+{
+ "id": 1,
+ "name": "Late Entry",
+ "tip": "Drag back to aim. Land Lucky on the stage!",
+ "width": 1700,
+ "cannon": {
+  "x": 130,
+  "y": 600
+ },
+ "stage": {
+  "x": 1300,
+  "y": 600,
+  "w": 320
+ },
+ "gift": null,
+ "damageTarget": 1500,
+ "objects": [
+  {
+   "type": "sofa",
+   "x": 720
+  },
+  {
+   "type": "laddooPyramid",
+   "x": 1020,
+   "count": 10
+  }
+ ]
+}

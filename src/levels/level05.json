@@ -1,0 +1,42 @@
+{
+ "id": 5,
+ "name": "Mithai Mayhem",
+ "tip": "Avoid the sticky chashni vat!",
+ "width": 2100,
+ "cannon": {
+  "x": 130,
+  "y": 600
+ },
+ "stage": {
+  "x": 1720,
+  "y": 600,
+  "w": 320
+ },
+ "gift": {
+  "x": 1580,
+  "y": 430
+ },
+ "damageTarget": 6000,
+ "objects": [
+  {
+   "type": "laddooPyramid",
+   "x": 640,
+   "count": 10
+  },
+  {
+   "type": "laddooPyramid",
+   "x": 840,
+   "count": 10
+  },
+  {
+   "type": "laddooPyramid",
+   "x": 1040,
+   "count": 10
+  },
+  {
+   "type": "vat",
+   "x": 1430,
+   "w": 300
+  }
+ ]
+}

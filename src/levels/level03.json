@@ -1,0 +1,43 @@
+{
+ "id": 3,
+ "name": "Say Cheese",
+ "tip": "Knock over the photographers for big damage",
+ "width": 2000,
+ "cannon": {
+  "x": 130,
+  "y": 600
+ },
+ "stage": {
+  "x": 1620,
+  "y": 600,
+  "w": 320
+ },
+ "gift": {
+  "x": 1000,
+  "y": 300
+ },
+ "damageTarget": 4000,
+ "objects": [
+  {
+   "type": "photographer",
+   "x": 620,
+   "walkRange": 220
+  },
+  {
+   "type": "garlandArch",
+   "x": 1000,
+   "gap": 150,
+   "h": 250
+  },
+  {
+   "type": "photographer",
+   "x": 1300,
+   "walkRange": 200
+  },
+  {
+   "type": "laddooPyramid",
+   "x": 1480,
+   "count": 6
+  }
+ ]
+}
