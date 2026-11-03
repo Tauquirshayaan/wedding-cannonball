@@ -16,7 +16,7 @@
   "x": 975,
   "y": 230
  },
- "damageTarget": 800,
+ "damageTarget": 600,
  "objects": [
   {
    "type": "vat",

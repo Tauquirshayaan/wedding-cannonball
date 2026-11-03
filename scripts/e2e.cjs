@@ -169,14 +169,14 @@ async function winLevel(p, id) {
   check(await active(p, 'Wardrobe'), 'wardrobe opens');
   const totalStars = await game(p, () => Object.values(JSON.parse(localStorage.getItem('hc_wedding_save_v1')).levels).reduce((a, l) => a + l.stars, 0));
   // card 10 = Navy Suit (needs 6 stars), second row
-  await p.mouse.click(640 - 3.5 * 162 + 1 * 162, 440);
+  await p.mouse.click(640 - 3.5 * 162 + 3 * 162, 440); // row 2, 4th card = Navy Suit (6 stars)
   await p.waitForTimeout(200);
   const chosen = await game(p, () => JSON.parse(localStorage.getItem('hc_wedding_save_v1')).outfit);
   check(totalStars >= 6 ? chosen === 's1' : chosen !== 's1', `suit unlock follows stars (${totalStars} stars → choice "${chosen}")`);
   if (chosen === 's1') {
     await game(p, () => window.__hcGame.scene.start('Game', { levelId: 2 }));
     await p.waitForTimeout(500);
-    check(await game(p, () => window.__hcGame.textures.exists('torso_s1') && window.__hcScene && window.__hcScene.children.list.some((c) => c.texture && c.texture.key === 'pagdi_s1')), 'Lucky wears the chosen suit in game');
+    check(await game(p, () => window.__hcGame.textures.exists('torso_s1') && window.__hcScene && window.__hcScene.children.list.some(function has(c) { return (c.texture && c.texture.key === 'pagdi_s1') || (c.list && c.list.some(has)); })), 'Lucky wears the chosen suit in game');
   }
   await game(p, () => { const d = JSON.parse(localStorage.getItem('hc_wedding_save_v1')); d.outfit = 'auto'; localStorage.setItem('hc_wedding_save_v1', JSON.stringify(d)); });
 
