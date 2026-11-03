@@ -39,20 +39,28 @@ export const THEMES: Theme[] = [
   { id: 'ballroom', venue: 'Grand Ballroom', sky: ['#0b0820', '#1e1240', '#3a1a50'], stars: true, body: 'none', fireworks: true, far: 'windows', farColor: '#3a2a10', near: 'chandeliers', nearColor: '#c9971a', lights: ['#ffe9b8', '#f4c430', '#ffffff'], deco: 'crystals', ground: 'marble', groundColors: ['#e8e0d0', '#d8cfbe'], carpet: 0x7a1c2e },
 ];
 
-export interface Outfit { id: string; style: 'kurta' | 'sherwani' | 'jacket'; main: string; dark: string; trim: string; legs: string; shoe: string; safa: string; safaDark: string; }
+export interface Outfit { id: string; name: string; stars: number; style: 'kurta' | 'sherwani' | 'jacket' | 'suit' | 'tux'; main: string; dark: string; trim: string; legs: string; shoe: string; safa: string; safaDark: string; }
 
 export const OUTFITS: Outfit[] = [
-  { id: 'o1', style: 'kurta', main: '#f7a21b', dark: '#d9800b', trim: '#f4c430', legs: '#fff3d6', shoe: '#f4c430', safa: '#e6197e', safaDark: '#b0105e' },
-  { id: 'o2', style: 'sherwani', main: '#fff3d6', dark: '#e8d8b0', trim: '#c9971a', legs: '#fff3d6', shoe: '#c9971a', safa: '#d72631', safaDark: '#a01020' },
-  { id: 'o3', style: 'kurta', main: '#6ad1ff', dark: '#3aa8e0', trim: '#ffffff', legs: '#ffffff', shoe: '#8b4a24', safa: '#f7a21b', safaDark: '#d9800b' },
-  { id: 'o4', style: 'jacket', main: '#1e2a5a', dark: '#141c40', trim: '#f4c430', legs: '#fff3d6', shoe: '#2a1420', safa: '#f4c430', safaDark: '#c9971a' },
-  { id: 'o5', style: 'sherwani', main: '#7a1c2e', dark: '#5a1020', trim: '#f4c430', legs: '#fff3d6', shoe: '#f4c430', safa: '#fff3d6', safaDark: '#e0d0a8' },
-  { id: 'o6', style: 'kurta', main: '#7ed957', dark: '#5ab83a', trim: '#f4c430', legs: '#fff3d6', shoe: '#8b4a24', safa: '#e6197e', safaDark: '#b0105e' },
-  { id: 'o7', style: 'jacket', main: '#b39ddb', dark: '#8a70c0', trim: '#ffffff', legs: '#ffffff', shoe: '#f4c430', safa: '#3e9b3a', safaDark: '#2c7429' },
-  { id: 'o8', style: 'sherwani', main: '#1b1b22', dark: '#0a0a10', trim: '#d72631', legs: '#fff3d6', shoe: '#d72631', safa: '#d72631', safaDark: '#a01020' },
-  { id: 'o9', style: 'kurta', main: '#ffb3a7', dark: '#e88a7a', trim: '#2a9d8f', legs: '#fff3d6', shoe: '#2a9d8f', safa: '#2a9d8f', safaDark: '#1f7a6e' },
-  { id: 'o10', style: 'sherwani', main: '#f4c430', dark: '#c9971a', trim: '#7a1c2e', legs: '#fff3d6', shoe: '#7a1c2e', safa: '#7a1c2e', safaDark: '#5a1020' },
+  { id: 'o1', name: 'Marigold Kurta', stars: 0, style: 'kurta', main: '#f7a21b', dark: '#d9800b', trim: '#f4c430', legs: '#fff3d6', shoe: '#f4c430', safa: '#e6197e', safaDark: '#b0105e' },
+  { id: 'o2', name: 'Ivory Sherwani', stars: 0, style: 'sherwani', main: '#fff3d6', dark: '#e8d8b0', trim: '#c9971a', legs: '#fff3d6', shoe: '#c9971a', safa: '#d72631', safaDark: '#a01020' },
+  { id: 'o3', name: 'Sky Kurta', stars: 0, style: 'kurta', main: '#6ad1ff', dark: '#3aa8e0', trim: '#ffffff', legs: '#ffffff', shoe: '#8b4a24', safa: '#f7a21b', safaDark: '#d9800b' },
+  { id: 'o4', name: 'Navy Nehru Jacket', stars: 0, style: 'jacket', main: '#1e2a5a', dark: '#141c40', trim: '#f4c430', legs: '#fff3d6', shoe: '#2a1420', safa: '#f4c430', safaDark: '#c9971a' },
+  { id: 'o5', name: 'Maroon Sherwani', stars: 0, style: 'sherwani', main: '#7a1c2e', dark: '#5a1020', trim: '#f4c430', legs: '#fff3d6', shoe: '#f4c430', safa: '#fff3d6', safaDark: '#e0d0a8' },
+  { id: 'o6', name: 'Mint Kurta', stars: 0, style: 'kurta', main: '#7ed957', dark: '#5ab83a', trim: '#f4c430', legs: '#fff3d6', shoe: '#8b4a24', safa: '#e6197e', safaDark: '#b0105e' },
+  { id: 'o7', name: 'Lavender Jacket', stars: 0, style: 'jacket', main: '#b39ddb', dark: '#8a70c0', trim: '#ffffff', legs: '#ffffff', shoe: '#f4c430', safa: '#3e9b3a', safaDark: '#2c7429' },
+  { id: 'o8', name: 'Black Sherwani', stars: 0, style: 'sherwani', main: '#1b1b22', dark: '#0a0a10', trim: '#d72631', legs: '#fff3d6', shoe: '#d72631', safa: '#d72631', safaDark: '#a01020' },
+  { id: 'o9', name: 'Peach Kurta', stars: 0, style: 'kurta', main: '#ffb3a7', dark: '#e88a7a', trim: '#2a9d8f', legs: '#fff3d6', shoe: '#2a9d8f', safa: '#2a9d8f', safaDark: '#1f7a6e' },
+  { id: 'o10', name: 'Golden Sherwani', stars: 0, style: 'sherwani', main: '#f4c430', dark: '#c9971a', trim: '#7a1c2e', legs: '#fff3d6', shoe: '#7a1c2e', safa: '#7a1c2e', safaDark: '#5a1020' },
+  // suits: unlocked by stars
+  { id: 's1', name: 'Navy Suit', stars: 6, style: 'suit', main: '#22325e', dark: '#17213f', trim: '#d72631', legs: '#22325e', shoe: '#1b1b22', safa: '#2a2a33', safaDark: '#d72631' },
+  { id: 's2', name: 'Black Tuxedo', stars: 12, style: 'tux', main: '#1b1b22', dark: '#000000', trim: '#1b1b22', legs: '#1b1b22', shoe: '#000000', safa: '#1b1b22', safaDark: '#f4c430' },
+  { id: 's3', name: 'Grey Suit', stars: 18, style: 'suit', main: '#7a808c', dark: '#5c616b', trim: '#2f6db5', legs: '#7a808c', shoe: '#3a2418', safa: '#5c616b', safaDark: '#2f6db5' },
+  { id: 's4', name: 'White Party Suit', stars: 24, style: 'suit', main: '#f4f1ea', dark: '#d8d2c4', trim: '#e6197e', legs: '#f4f1ea', shoe: '#e8e0d0', safa: '#f4f1ea', safaDark: '#e6197e' },
 ];
+
+/** Campaign outfits rotate per level; suits are earned with stars and picked in the Wardrobe. */
+export const LEVEL_OUTFITS = OUTFITS.filter((o) => o.stars === 0);
 
 function make(scene: Phaser.Scene, key: string, w: number, h: number, draw: (c: Ctx, w: number, h: number) => void) {
   if (scene.textures.exists(key)) return;
@@ -78,7 +86,19 @@ export function makeOutfit(scene: Phaser.Scene, o: Outfit) {
   make(scene, `torso_${o.id}`, 34, 52, (c) => {
     const long = o.style === 'sherwani';
     rr(c, 3, 3, 28, long ? 47 : 46, 9); fs(c, o.main);
-    if (o.style === 'jacket') {
+    if (o.style === 'suit' || o.style === 'tux') {
+      // white shirt V, lapels, tie or bow tie, buttons
+      c.beginPath(); c.moveTo(10, 4); c.lineTo(17, 26); c.lineTo(24, 4); c.closePath(); fs(c, '#ffffff', 1.5);
+      c.beginPath(); c.moveTo(9, 4); c.lineTo(17, 28); c.lineTo(12, 30); c.lineTo(6, 8); c.closePath(); fs(c, o.dark, 1.5);
+      c.beginPath(); c.moveTo(25, 4); c.lineTo(17, 28); c.lineTo(22, 30); c.lineTo(28, 8); c.closePath(); fs(c, o.dark, 1.5);
+      if (o.style === 'tux') {
+        c.beginPath(); c.moveTo(11, 7); c.lineTo(17, 10); c.lineTo(23, 7); c.lineTo(23, 13); c.lineTo(17, 10); c.lineTo(11, 13); c.closePath(); fs(c, '#1b1b22', 1);
+      } else {
+        c.beginPath(); c.moveTo(15, 7); c.lineTo(19, 7); c.lineTo(20, 22); c.lineTo(17, 26); c.lineTo(14, 22); c.closePath(); fs(c, o.trim, 1.2);
+      }
+      dot(c, 17, 33, 1.8, o.style === 'tux' ? '#f4c430' : '#1b1b22'); dot(c, 17, 39, 1.8, o.style === 'tux' ? '#f4c430' : '#1b1b22');
+      c.fillStyle = '#ffffff'; c.fillRect(27, 12, 3, 5); // pocket square
+    } else if (o.style === 'jacket') {
       // Nehru jacket over a cream kurta
       rr(c, 12, 5, 10, 40, 3); fs(c, '#fff3d6', 1.5);
       c.strokeStyle = o.trim; c.lineWidth = 2; c.beginPath(); c.moveTo(12, 6); c.lineTo(12, 44); c.moveTo(22, 6); c.lineTo(22, 44); c.stroke();
@@ -89,12 +109,13 @@ export function makeOutfit(scene: Phaser.Scene, o: Outfit) {
       for (const y of [14, 22, 30]) dot(c, 17, y, 1.6, o.dark);
       if (long) { c.strokeStyle = o.trim; c.lineWidth = 2; c.strokeRect(6, 8, 22, 38); }
     }
-    c.fillStyle = o.dark; c.fillRect(5, 40, 24, 5);
+    if (o.style !== 'suit' && o.style !== 'tux') { c.fillStyle = o.dark; c.fillRect(5, 40, 24, 5); }
     c.beginPath(); c.ellipse(17, 4, 8, 3, 0, 0, Math.PI * 2); fs(c, '#c88550', 2);
   });
   make(scene, `arm_${o.id}`, 14, 34, (c) => {
+    const suit = o.style === 'suit' || o.style === 'tux';
     rr(c, 2, 2, 10, 24, 4); fs(c, o.style === 'jacket' ? '#fff3d6' : o.main, 2.5);
-    c.fillStyle = o.trim; c.fillRect(3, 20, 8, 4);
+    c.fillStyle = suit ? '#ffffff' : o.trim; c.fillRect(3, 20, 8, 4); // shirt cuff for suits
     c.beginPath(); c.arc(7, 28, 4.5, 0, Math.PI * 2); fs(c, '#c88550', 2);
   });
   make(scene, `leg_${o.id}`, 16, 40, (c) => {
@@ -103,6 +124,13 @@ export function makeOutfit(scene: Phaser.Scene, o: Outfit) {
     fs(c, o.shoe, 2);
   });
   make(scene, `pagdi_${o.id}`, 42, 24, (c) => {
+    if (o.style === 'suit' || o.style === 'tux') {
+      // party fedora instead of a safa
+      c.beginPath(); c.ellipse(21, 19, 19, 4, 0, 0, Math.PI * 2); fs(c, o.safa, 2.5);
+      c.beginPath(); c.moveTo(9, 18); c.quadraticCurveTo(9, 3, 21, 4); c.quadraticCurveTo(33, 3, 33, 18); c.closePath(); fs(c, o.safa, 2.5);
+      c.fillStyle = o.safaDark; c.fillRect(10, 13, 22, 4);
+      return;
+    }
     c.beginPath(); c.moveTo(4, 20); c.quadraticCurveTo(4, 2, 21, 3); c.quadraticCurveTo(38, 2, 38, 20); c.closePath();
     fs(c, o.safa);
     c.strokeStyle = o.safaDark; c.lineWidth = 2.5;
@@ -366,4 +394,10 @@ export function releaseThemeTextures(scene: Phaser.Scene, t: Theme) {
 }
 
 export function themeFor(levelId: number) { return THEMES[(levelId - 1) % THEMES.length]; }
-export function outfitFor(levelId: number) { return OUTFITS[(levelId - 1) % OUTFITS.length]; }
+export function outfitFor(levelId: number) { return LEVEL_OUTFITS[(levelId - 1) % LEVEL_OUTFITS.length]; }
+
+/** The outfit Lucky wears: the player's Wardrobe choice if it is unlocked, otherwise the level's own. */
+export function chosenOutfit(levelId: number, choice: string, stars: number) {
+  const o = OUTFITS.find((x) => x.id === choice);
+  return o && stars >= o.stars ? o : outfitFor(levelId);
+}

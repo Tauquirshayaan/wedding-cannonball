@@ -162,6 +162,24 @@ async function winLevel(p, id) {
   await p.mouse.click(640, 530);
   check(await until(p, () => window.__hcScene && window.__hcScene.run && window.__hcScene.run.round === 1 && window.__hcScene.run.damage === 0, null, 8000), 'New Run starts again from round 1');
 
+  // wardrobe: suits unlocked by stars, choice saved and worn in game
+  console.log('\n[wardrobe]');
+  await game(p, () => { const g = window.__hcGame; for (const k of ['Result', 'Game', 'Hud']) if (g.scene.isActive(k)) g.scene.stop(k); g.scene.start('Wardrobe', { from: 'Title' }); });
+  await p.waitForTimeout(500);
+  check(await active(p, 'Wardrobe'), 'wardrobe opens');
+  const totalStars = await game(p, () => Object.values(JSON.parse(localStorage.getItem('hc_wedding_save_v1')).levels).reduce((a, l) => a + l.stars, 0));
+  // card 10 = Navy Suit (needs 6 stars), second row
+  await p.mouse.click(640 - 3.5 * 162 + 1 * 162, 440);
+  await p.waitForTimeout(200);
+  const chosen = await game(p, () => JSON.parse(localStorage.getItem('hc_wedding_save_v1')).outfit);
+  check(totalStars >= 6 ? chosen === 's1' : chosen !== 's1', `suit unlock follows stars (${totalStars} stars → choice "${chosen}")`);
+  if (chosen === 's1') {
+    await game(p, () => window.__hcGame.scene.start('Game', { levelId: 2 }));
+    await p.waitForTimeout(500);
+    check(await game(p, () => window.__hcGame.textures.exists('torso_s1') && window.__hcScene && window.__hcScene.children.list.some((c) => c.texture && c.texture.key === 'pagdi_s1')), 'Lucky wears the chosen suit in game');
+  }
+  await game(p, () => { const d = JSON.parse(localStorage.getItem('hc_wedding_save_v1')); d.outfit = 'auto'; localStorage.setItem('hc_wedding_save_v1', JSON.stringify(d)); });
+
   // reload: progress survives, level select shows unlocks
   await p.reload();
   await until(p, () => window.__hcGame && window.__hcGame.scene.isActive('Title'));

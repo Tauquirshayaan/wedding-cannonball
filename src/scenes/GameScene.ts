@@ -3,10 +3,11 @@ import { GAME_W, GAME_H, GROUND_Y, PHYS, STEP_MS, FONT } from '../config';
 import { OBJ } from '../data/objectTypes';
 import { getLevel, EndlessRun } from '../levels';
 import { ENDLESS_BASE } from '../levels/endless';
-import { themeFor, outfitFor, themeTextures, releaseThemeTextures } from '../art/Themes';
+import { themeFor, chosenOutfit, themeTextures, releaseThemeTextures } from '../art/Themes';
 import type { LevelData } from '../levels/types';
 import { buildLevel, LevelWorld, Prop, Bouncer } from '../objects/LevelBuilder';
 import { Ragdoll } from '../objects/Ragdoll';
+import { decorateLevel, addShadow, DecorHandle } from '../art/Decor';
 import { DamageTracker, rupees } from '../systems/DamageTracker';
 import { ReplayRecorder } from '../systems/ReplayRecorder';
 import { AudioManager, Sfx } from '../systems/AudioManager';
@@ -112,7 +113,7 @@ export class GameScene extends Phaser.Scene {
     // --- backdrop layers ---
     const theme = themeFor(L.id);
     const tk = themeTextures(this, theme);
-    Ragdoll.outfit = outfitFor(L.id).id;
+    Ragdoll.outfit = chosenOutfit(L.id, SaveManager.data.outfit, SaveManager.totalStars()).id;
     const sky = this.add.image(GAME_W / 2, GAME_H / 2, tk.sky).setScrollFactor(0).setDepth(-10);
     this.add.tileSprite(-600, GROUND_Y - 290, L.width + 3000, 300, tk.far).setOrigin(0).setScrollFactor(0.2, 0.35).setDepth(-9);
     this.add.tileSprite(-600, GROUND_Y - 320, L.width + 3000, 330, tk.near).setOrigin(0).setScrollFactor(0.5, 0.7).setDepth(-8);
@@ -126,9 +127,17 @@ export class GameScene extends Phaser.Scene {
     carpet.fillRect(L.cannon.x + 60, GROUND_Y + 14, L.stage.x - L.cannon.x - 40, 3);
 
     // sky must cover the view even fully zoomed out
-    const minZoom = Math.min(1, GAME_W / (L.stage.x + L.stage.w + 90)) * 0.85;
-    sky.setScale(2.3 / minZoom);
+    this.sky = sky;
     this.world = buildLevel(this, L);
+    this.decor = decorateLevel(this, L, theme);
+    // 2.5D: soft shadows under Lucky and the people
+    this.luckyShadow = addShadow(this, 70).setVisible(false);
+    this.propShadows = [];
+    for (const p of this.world.props) {
+      if (p.type === 'photographer' || p.type === 'relative') this.propShadows.push({ img: addShadow(this, 64), prop: p });
+      else if (p.type === 'sofa') addShadow(this, 190).setPosition(p.img.x, GROUND_Y + 1);
+      else if (p.type === 'cake' && p.img.y > GROUND_Y - 40) addShadow(this, 170).setPosition(p.img.x, GROUND_Y + 1);
+    }
 
     // --- cannon ---
     const cx = L.cannon.x;
@@ -208,7 +217,11 @@ export class GameScene extends Phaser.Scene {
   private aimCamX() { return (this.level.stage.x + this.level.stage.w + 90) / 2; }
   private aimCamY() { return GAME_H - GAME_H / 2 / this.fitZoom; }
 
+  private sky!: Phaser.GameObjects.Image;
+
   private applyCamera() {
+    // the sky is screen-fixed: counter the camera zoom so it always just covers the view
+    this.sky?.setScale(2.1 / this.cam.zoom);
     const c = this.cameras.main;
     const z = this.cam.zoom;
     c.setZoom(z);
@@ -457,6 +470,7 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(250, () => this.confetti.explode(60, L.stage.x + L.stage.w / 2, L.stage.y - 150));
     this.popText(t.x, t.y - 90, 'PAHUNCH GAYE!', '#f4c430', 46);
     AudioManager.play('yay');
+    this.decor.cheer();
     this.react('win', t.x, t.y);
     const run = this.run ? { ...this.run, damage: this.run.damage + this.damage.total } : null;
     if (run) { SaveManager.recordEndless(run.round, run.damage); Analytics.track('endless_round_clear', { round: run.round }); }
@@ -649,8 +663,24 @@ export class GameScene extends Phaser.Scene {
     else if (this.stillMs >= PHYS.settleMs || this.stageStillMs >= 600 || this.flightMs >= PHYS.maxLaunchMs || out) this.endLaunch();
   }
 
+  private decor!: DecorHandle;
+  private luckyShadow!: Phaser.GameObjects.Image;
+  private propShadows: { img: Phaser.GameObjects.Image; prop: Prop }[] = [];
+
   private syncVisuals() {
     this.ragdoll?.sync();
+    const r = this.ragdoll;
+    if (r) {
+      const t = r.torso.position, S = this.level.stage;
+      const surface = t.x > S.x && t.x < S.x + S.w && t.y < S.y + 10 ? S.y : GROUND_Y;
+      const k = Phaser.Math.Clamp(1 - (surface - t.y) / 700, 0.2, 1);
+      this.luckyShadow.setVisible(true).setPosition(t.x, surface + 1).setDisplaySize(70 * k, 21 * k).setAlpha(0.5 * k);
+    } else this.luckyShadow.setVisible(false);
+    for (const sh of this.propShadows) {
+      const b = sh.prop.body.position;
+      const k = Phaser.Math.Clamp(1 - (GROUND_Y - 45 - b.y) / 400, 0.2, 1);
+      sh.img.setPosition(sh.prop.img.x, GROUND_Y + 1).setAlpha(0.5 * k);
+    }
     for (const p of this.world.props) {
       if (p.movable && !p.body.isStatic) p.img.setPosition(p.body.position.x, p.body.position.y).setRotation(p.body.angle);
     }
