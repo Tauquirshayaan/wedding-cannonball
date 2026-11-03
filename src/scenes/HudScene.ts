@@ -94,6 +94,22 @@ export class HudScene extends Phaser.Scene {
     on('hud:power', (p: number | null) => this.drawPower(p));
     on('hud:flail', () => this.flailHint.setAlpha(0));
     on('hud:hide', () => this.root.setVisible(false));
+    // LIVE commentary ticker
+    const liveBg = this.add.graphics();
+    const livePill = this.add.graphics();
+    livePill.fillStyle(0xd72631, 1); livePill.fillRoundedRect(0, -16, 64, 32, 10);
+    const liveTag = this.add.text(32, 0, 'LIVE', { fontFamily: FONT, fontSize: '18px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+    const liveTxt = this.add.text(78, 0, '', { fontFamily: FONT, fontSize: '24px', color: '#ffffff', fontStyle: 'bold' }).setOrigin(0, 0.5);
+    const live = this.add.container(-700, 612, [liveBg, livePill, liveTag, liveTxt]);
+    this.tweens.add({ targets: livePill, alpha: 0.5, duration: 500, yoyo: true, repeat: -1 });
+    on('hud:live', (text: string) => {
+      liveTxt.setText(text);
+      liveBg.clear(); liveBg.fillStyle(0x2a1420, 0.85); liveBg.fillRoundedRect(-10, -24, liveTxt.width + 100, 48, 16);
+      this.tweens.killTweensOf(live);
+      live.setPosition(-liveTxt.width - 120, 612).setAlpha(1);
+      this.tweens.add({ targets: live, x: 24, duration: 260, ease: 'Back.out' });
+      this.tweens.add({ targets: live, alpha: 0, delay: 2800, duration: 350 });
+    });
     const aimG = this.add.graphics();
     const aimTxt = this.add.text(0, 0, '', { fontFamily: FONT, fontSize: '20px', color: '#ffffff', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 5 }).setOrigin(0.5).setVisible(false);
     on('hud:aim', (d: { sx: number; sy: number; px: number; py: number; valid: boolean; angle: number; power: number } | null) => {

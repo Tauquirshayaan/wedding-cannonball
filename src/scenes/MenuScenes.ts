@@ -208,15 +208,20 @@ export class SettingsScene extends Phaser.Scene {
     this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.6).setOrigin(0).setInteractive();
     panel(this, GAME_W / 2, GAME_H / 2, 620, 540);
     title(this, GAME_W / 2, 140, 'Settings', 52);
-    this.slider(220, 'Sound effects', SaveManager.data.sfx, (v) => { SaveManager.data.sfx = v; AudioManager.setSfx(v); AudioManager.play('pop'); });
-    this.slider(320, 'Music', SaveManager.data.music, (v) => { SaveManager.data.music = v; AudioManager.setMusic(v); });
+    this.slider(205, 'Sound effects', SaveManager.data.sfx, (v) => { SaveManager.data.sfx = v; AudioManager.setSfx(v); AudioManager.play('pop'); });
+    this.slider(295, 'Music', SaveManager.data.music, (v) => { SaveManager.data.music = v; AudioManager.setMusic(v); });
     let confirm = false;
-    const reset = new Button(this, GAME_W / 2, 440, 'Reset progress', () => {
+    const voiceLabel = () => `Voice commentary: ${SaveManager.data.voice ? 'ON' : 'OFF'}`;
+    const voiceBtn = new Button(this, GAME_W / 2, 390, voiceLabel(), () => {
+      SaveManager.data.voice = !SaveManager.data.voice; SaveManager.persist();
+      voiceBtn.setText(voiceLabel());
+    }, { w: 380, h: 56, size: 22, color: 0x3e9b3a });
+    const reset = new Button(this, GAME_W / 2, 465, 'Reset progress', () => {
       if (!confirm) { confirm = true; reset.setText('Tap again to confirm'); return; }
       SaveManager.reset();
       reset.setText('Progress reset!').setEnabled(false);
     }, { w: 380, h: 60, size: 24, color: 0x5a1020 });
-    new Button(this, GAME_W / 2, 540, 'Back', () => {
+    new Button(this, GAME_W / 2, 548, 'Back', () => {
       SaveManager.persist();
       this.scene.stop();
       if (data.from === 'Title') this.scene.start('Title'); else this.scene.resume(data.from);

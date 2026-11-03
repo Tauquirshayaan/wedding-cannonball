@@ -8,9 +8,10 @@ export interface SaveData {
   music: number;
   muted: boolean;
   tutorialDone: boolean;
+  voice: boolean;
 }
 
-const fresh = (): SaveData => ({ v: 1, levels: {}, sfx: 0.8, music: 0.5, muted: false, tutorialDone: false });
+const fresh = (): SaveData => ({ v: 1, levels: {}, sfx: 0.8, music: 0.5, muted: false, tutorialDone: false, voice: true });
 
 class SaveManagerImpl {
   data: SaveData = fresh();

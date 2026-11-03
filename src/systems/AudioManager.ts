@@ -2,7 +2,8 @@
 
 export type Sfx =
   | 'boom' | 'whoosh' | 'dhol' | 'crash' | 'laddoo' | 'click' | 'ohh' | 'whistle'
-  | 'shehnai' | 'sad' | 'pop' | 'star' | 'splat' | 'combo' | 'gift' | 'bounce' | 'flail';
+  | 'shehnai' | 'sad' | 'pop' | 'star' | 'splat' | 'combo' | 'gift' | 'bounce' | 'flail'
+  | 'ouch' | 'aah' | 'haaye' | 'arre' | 'yay' | 'oof';
 
 class AudioManagerImpl {
   ctx: AudioContext | null = null;
@@ -60,6 +61,8 @@ class AudioManagerImpl {
   setMusic(v: number) { this.musicVol = v; this.applyVolumes(); }
   setMuted(m: boolean) { this.muted = m; this.applyVolumes(); }
   isMuted() { return this.muted; }
+  /** 0..1 volume for spoken commentary (0 when muted or silenced by the portal). */
+  voiceVolume() { return this.muted || this.externallyMuted || this.hidden ? 0 : this.sfxVol; }
   /** Portal-controlled mute (ads, YouTube audio setting). */
   setExternalMute(m: boolean) { this.externallyMuted = m; this.applyVolumes(); }
 
@@ -227,6 +230,13 @@ class AudioManagerImpl {
       case 'flail':
         this.tone('sawtooth', 300, 700, t, 0.15, 0.12, out);
         break;
+      // vocal reactions: a buzzy voice source through two vowel formants with a pitch glide
+      case 'ouch': this.vocal(t, 330, 190, 0.32, [700, 1100], [400, 800], 0.55, out); break;
+      case 'oof': this.vocal(t, 220, 140, 0.22, [500, 900], [450, 850], 0.5, out); break;
+      case 'aah': this.vocal(t, 420, 300, 0.9, [800, 1250], [750, 1200], 0.45, out); break;
+      case 'haaye': this.vocal(t, 520, 380, 0.5, [850, 1400], [700, 1900], 0.4, out); break;
+      case 'arre': this.vocal(t, 150, 120, 0.42, [650, 1100], [500, 1700], 0.55, out); break;
+      case 'yay': this.vocal(t, 330, 520, 0.4, [700, 1200], [500, 2000], 0.45, out); break;
       case 'shehnai': {
         const n = (s: number) => 523.25 * Math.pow(2, s / 12);
         // celebratory reed fanfare
@@ -240,6 +250,25 @@ class AudioManagerImpl {
         break;
       }
     }
+  }
+
+  private vocal(t: number, p0: number, p1: number, dur: number, f0: [number, number], f1: [number, number], vol: number, out: AudioNode) {
+    const c = this.ctx!;
+    const o = c.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(p0, t); o.frequency.exponentialRampToValueAtTime(p1, t + dur);
+    const vib = c.createOscillator(); const vg = c.createGain(); vib.frequency.value = 7; vg.gain.value = p0 * 0.03;
+    vib.connect(vg); vg.connect(o.frequency);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.03);
+    g.gain.setValueAtTime(vol, t + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    for (let i = 0; i < 2; i++) {
+      const f = c.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 6;
+      f.frequency.setValueAtTime(f0[i], t); f.frequency.linearRampToValueAtTime(f1[i], t + dur);
+      const fg = c.createGain(); fg.gain.value = i ? 0.6 : 1;
+      o.connect(f); f.connect(fg); fg.connect(g);
+    }
+    g.connect(out);
+    o.start(t); vib.start(t); o.stop(t + dur + 0.05); vib.stop(t + dur + 0.05);
   }
 
   // ---------- music: original band-baja style loop ----------

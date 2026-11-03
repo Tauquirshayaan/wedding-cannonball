@@ -8,7 +8,8 @@ import { buildLevel, LevelWorld, Prop, Bouncer } from '../objects/LevelBuilder';
 import { Ragdoll } from '../objects/Ragdoll';
 import { DamageTracker, rupees } from '../systems/DamageTracker';
 import { ReplayRecorder } from '../systems/ReplayRecorder';
-import { AudioManager } from '../systems/AudioManager';
+import { AudioManager, Sfx } from '../systems/AudioManager';
+import { Commentary, Speaker } from '../systems/Commentary';
 import { SaveManager } from '../systems/SaveManager';
 import { Analytics } from '../systems/Analytics';
 import { bus } from '../systems/bus';
@@ -168,6 +169,7 @@ export class GameScene extends Phaser.Scene {
       for (const [e, fn] of this.hudHandlers) bus.off(e, fn);
       this.hudHandlers = [];
       this.tweens.killAll();
+      Commentary.stop();
     });
     this.game.events.on('hidden', this.onHidden, this);
     this.events.once('shutdown', () => this.game.events.off('hidden', this.onHidden, this));
@@ -356,6 +358,7 @@ export class GameScene extends Phaser.Scene {
     this.setBarrelAngle(angle);
     // juice
     AudioManager.play('boom');
+    this.time.delayedCall(120, () => this.react('launch', m.x, m.y - 40, Math.random() < 0.6 ? 'aah' : undefined, true));
     const mz = this.muzzle(angle, 120);
     this.smoke.explode(18, mz.x, mz.y);
     this.sparks.explode(14, mz.x, mz.y);
@@ -389,6 +392,10 @@ export class GameScene extends Phaser.Scene {
     }
     this.state = 'between';
     if (win) { this.levelClear(); return; }
+    // live commentary on where he ended up
+    const S = this.level.stage;
+    const missEvent = this.stuck ? 'missVat' : t.x < S.x - 140 ? 'missShort' : t.x > S.x + S.w ? 'missLong' : 'missNear';
+    this.time.delayedCall(this.stuck ? 900 : 200, () => this.react(missEvent, t.x, t.y));
     this.ragdoll.setFace('dizzy');
     if (this.launchesLeft > 0) {
       const msg = this.stuck ? 'Chashni mein phas gaye!' : this.launchesLeft === 1 ? 'Missed! Last launch!' : 'Missed! Try again';
@@ -428,6 +435,8 @@ export class GameScene extends Phaser.Scene {
     this.confetti.explode(90, t.x, t.y - 40);
     this.time.delayedCall(250, () => this.confetti.explode(60, L.stage.x + L.stage.w / 2, L.stage.y - 150));
     this.popText(t.x, t.y - 90, 'PAHUNCH GAYE!', '#f4c430', 46);
+    AudioManager.play('yay');
+    this.react('win', t.x, t.y);
     const data: ResultData = { levelId: L.id, cleared: true, stars, damage: this.damage.total, score, launchesLeft: this.launchesLeft, gift, newBest, badge, target: L.damageTarget, hasGift: !!L.gift };
     this.time.delayedCall(this.testSteps ? 10 : 1300, () => this.startReplay(() => this.showResult(data)));
   }
@@ -438,6 +447,7 @@ export class GameScene extends Phaser.Scene {
     SaveManager.record(L.id, false, 0, 0);
     Analytics.track('level_fail', { level: L.id, damage: this.damage.total });
     AudioManager.play('sad');
+    this.time.delayedCall(700, () => this.react('fail', 0, 0));
     bus.emit('hud:toast', 'Shaadi miss ho gayi!', 'Out of launches');
     const data: ResultData = { levelId: L.id, cleared: false, stars: 0, damage: this.damage.total, score: 0, launchesLeft: 0, gift: !!this.world.gift?.collected, newBest: false, badge: null, target: L.damageTarget, hasGift: !!L.gift };
     this.time.delayedCall(this.testSteps ? 10 : 1400, () => this.startReplay(() => this.showResult(data)));
@@ -644,7 +654,13 @@ export class GameScene extends Phaser.Scene {
         const prop = this.world.bodyProp.get(other.id);
         if (rel > PHYS.shakeSpeed) this.bigImpact(part.position.x, part.position.y, rel, !!prop || !!bouncer);
         if (prop) this.score(prop, rel, part.position);
-        else if (rel > 6 && !bouncer) AudioManager.play('crash', rel / 16);
+        else if (rel > 6 && !bouncer) {
+          AudioManager.play('crash', rel / 16);
+          if (rel > 9) {
+            const hard = ['wall', 'pillar', 'arch', 'backdrop', 'block', 'table', 'vatRim'].includes(other.label);
+            this.react(hard ? 'wall' : 'ground', part.position.x, part.position.y, hard ? 'ouch' : 'oof');
+          }
+        }
       } else if (this.state === 'flight') {
         const pa = this.world.bodyProp.get(a.id), pb = this.world.bodyProp.get(b.id);
         if (!pa && !pb) continue;
@@ -660,7 +676,7 @@ export class GameScene extends Phaser.Scene {
     this.petals.explode(Math.min(14, 4 + Math.round(rel / 2)), x, y);
     if (rel > PHYS.hitStopSpeed && onProp) this.hitStopMs = 60;
     if (rel > 9 && r.loseTurban()) {
-      this.popText(x, y - 60, 'Pagdi gayi!', '#ff9ad0', 24);
+      this.react('turban', x, y);
       this.recorder.mark(2);
     }
     this.recorder.mark(rel / 6);
@@ -680,6 +696,7 @@ export class GameScene extends Phaser.Scene {
     this.petals.explode(10, b.body.position.x, b.body.position.y - 30);
     this.recorder.mark(3);
     if (b.kind === 'dhol') this.popText(b.body.position.x, b.body.position.y - 70, 'DHUM!', '#ffd36b', 30);
+    this.react(b.kind, r.torso.position.x, r.torso.position.y);
     // the hit itself always scores, even at low speed
     this.score(b.prop, Math.max(rel, b.prop.hitSpeed + 0.1), r.torso.position);
   }
@@ -698,18 +715,22 @@ export class GameScene extends Phaser.Scene {
     if (prop.type === 'photographer') {
       this.hitStopMs = Math.max(this.hitStopMs, OBJ.photographer.flashFreezeMs);
       bus.emit('hud:flash');
-      this.popText(x, y - 90, 'Say cheese!', '#ffffff', 26);
+      this.react('photographer', x, y - 60, 'ouch', true);
     } else if (prop.type === 'relative') {
-      this.popText(x, y - 90, 'Arre!', '#ff9ad0', 34);
+      const aunty = prop.name === 'Aunty';
+      this.react(aunty ? 'aunty' : 'uncle', x, y - 60, aunty ? 'haaye' : 'arre', true);
       AudioManager.play('ohh');
     } else if (prop.type === 'cake') {
       this.frosting.explode(24, x, y);
+      this.react('cake', from.x, from.y, 'yay');
+    } else if (prop.type === 'sofa' || prop.type === 'laddoo') {
+      if (this.ragdoll && Math.hypot(from.x - this.ragdoll.torso.position.x, from.y - this.ragdoll.torso.position.y) < 80) this.react(prop.type, from.x, from.y, prop.type === 'sofa' ? 'oof' : undefined);
     }
     if (res.chain >= 2) {
       const big = res.mult >= PHYS.comboMax;
       bus.emit('hud:combo', res.mult, big);
       AudioManager.play('combo', 1 + res.chain * 0.08);
-      if (big && res.chain === 5) { AudioManager.play('ohh'); this.popText(x, y - 130, Phaser.Utils.Array.GetRandom(POP_LINES), '#ff4d6d', 40); }
+      if (big && res.chain === 5) { AudioManager.play('ohh'); this.popText(x, y - 130, Phaser.Utils.Array.GetRandom(POP_LINES), '#ff4d6d', 40); this.react('combo', x, y); }
     }
     bus.emit('hud:damage', this.damage.total, res.value);
   }
@@ -729,6 +750,7 @@ export class GameScene extends Phaser.Scene {
     bus.emit('hud:damage', this.damage.total, res.value);
     if (res.chain >= 2) bus.emit('hud:combo', res.mult, res.mult >= PHYS.comboMax);
     this.popText(rk.x, rk.y - 60, 'PATAKHA!', '#ff9a3c', 34);
+    this.react('rocket', rk.x, rk.y, 'yay', true);
     this.cameras.main.shake(200, 0.01);
     this.recorder.mark(6);
   }
@@ -741,7 +763,7 @@ export class GameScene extends Phaser.Scene {
     this.tweens.killTweensOf(g.img);
     g.glow.setVisible(false);
     this.tweens.add({ targets: g.img, y: g.y - 80, scale: 1.6, alpha: 0, duration: 600, ease: 'Back.in' });
-    this.popText(g.x, g.y - 50, 'Shagun mila!', '#7dff9a', 30);
+    this.react('gift', g.x, g.y, undefined, true);
     bus.emit('hud:gift');
     this.recorder.mark(4);
   }
@@ -757,7 +779,39 @@ export class GameScene extends Phaser.Scene {
     const res = this.damage.hit(OBJ.vat.damage, this.physTime);
     bus.emit('hud:damage', this.damage.total, res.value);
     this.popText(t.x, t.y - 70, `Sticky! ${rupees(OBJ.vat.damage).replace('₹-', '-₹')}`, '#ffb347', 30);
+    this.react('vat', t.x, t.y - 40, 'ouch', true);
     this.recorder.mark(3);
+  }
+
+  private lastReactAt = -1e9;
+
+  /** Character reaction / host commentary: optional vocal sound, speech bubble or LIVE ticker, spoken line. */
+  private react(event: string, x: number, y: number, sfx?: Sfx, force = false) {
+    if (this.testSteps) return;
+    if (sfx) AudioManager.play(sfx);
+    const now = this.time.now;
+    const r = Commentary.pick(event);
+    if (!r) return;
+    if (r.who !== 'host' && !force && now - this.lastReactAt < 900) return;
+    if (r.who !== 'host') this.lastReactAt = now;
+    if (r.who === 'host') bus.emit('hud:live', r.text);
+    else this.bubble(x, y, r.text, r.who);
+    Commentary.speak(r.who, r.line, r.priority);
+  }
+
+  private bubble(x: number, y: number, text: string, who: Speaker) {
+    const fill = who === 'lucky' ? 0xffffff : who === 'photographer' ? 0xd8f0ff : who === 'aunty' ? 0xffd6ec : 0xfff0c8;
+    const label = this.add.text(0, 0, text, { fontFamily: FONT, fontSize: '22px', color: '#2a1420', fontStyle: 'bold', align: 'center', wordWrap: { width: 260 } }).setOrigin(0.5);
+    const w = label.width + 28, h = label.height + 18;
+    const g = this.add.graphics();
+    g.fillStyle(0x2a1420, 1); g.fillRoundedRect(-w / 2 - 3, -h / 2 - 3, w + 6, h + 6, 16);
+    g.fillTriangle(-10, h / 2, 10, h / 2, -2, h / 2 + 18);
+    g.fillStyle(fill, 1); g.fillRoundedRect(-w / 2, -h / 2, w, h, 14);
+    g.fillTriangle(-7, h / 2 - 2, 7, h / 2 - 2, -2, h / 2 + 12);
+    const s = Math.min(1.8, 1 / this.cam.zoom);
+    const c = this.add.container(x, y - 60 * s, [g, label]).setDepth(130).setScale(0.3 * s);
+    this.tweens.add({ targets: c, scale: s, duration: 180, ease: 'Back.out' });
+    this.tweens.add({ targets: c, y: c.y - 30 * s, alpha: 0, delay: 1300, duration: 400, onComplete: () => c.destroy() });
   }
 
   private popText(x: number, y: number, text: string, color: string, size: number) {
