@@ -6,7 +6,7 @@ export const STEP_MS = 1000 / 60; // fixed physics step
 
 export const PHYS = {
   gravityY: 1.0,
-  maxLaunchSpeed: 30, // px per step at 100% power
+  maxLaunchSpeed: 32, // px per step at 100% power
   velocityCap: 45, // px per step, stops tunnelling
   ragdollFriction: 0.6,
   ragdollRestitution: 0.2,

@@ -560,8 +560,8 @@ export class GameScene extends Phaser.Scene {
       if (this.hitStopMs > 0) { this.hitStopMs -= dt; }
       else {
         this.acc += dt;
-        while (this.acc >= STEP_MS && steps < 4) { this.stepOnce(); this.acc -= STEP_MS; steps++; }
-        if (steps >= 4) this.acc = 0;
+        while (this.acc >= STEP_MS && steps < 5) { this.stepOnce(); this.acc -= STEP_MS; steps++; }
+        if (steps >= 5) this.acc = 0;
       }
     }
     this.syncVisuals();

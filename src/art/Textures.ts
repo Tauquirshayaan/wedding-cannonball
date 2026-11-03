@@ -754,34 +754,6 @@ export function generateCoreTextures(scene: Phaser.Scene, onProgress?: (p: numbe
     ['head_scared', 46, 46, luckyHead('scared')],
     ['head_dizzy', 46, 46, luckyHead('dizzy')],
     ['head_happy', 46, 46, luckyHead('happy')],
-    ['torso', 34, 52, (c) => {
-      rr(c, 3, 3, 28, 46, 9); fillStroke(c, P.marigold);
-      c.fillStyle = P.gold; c.fillRect(15, 6, 4, 40);
-      c.strokeStyle = OL; c.lineWidth = 1.5; c.strokeRect(15, 6, 4, 40);
-      for (const y of [14, 22, 30]) circle(c, 17, y, 1.6, P.maroon, 0);
-      c.fillStyle = P.marigoldDark; c.fillRect(5, 40, 24, 5);
-      ellipse(c, 17, 4, 8, 3, P.skin, 2);
-    }],
-    ['arm', 14, 34, (c) => {
-      rr(c, 2, 2, 10, 24, 4); fillStroke(c, P.marigold, 2.5);
-      c.fillStyle = P.gold; c.fillRect(3, 20, 8, 4);
-      circle(c, 7, 28, 4.5, P.skin, 2);
-    }],
-    ['leg', 16, 40, (c) => {
-      rr(c, 2, 2, 12, 31, 4); fillStroke(c, P.cream, 2.5);
-      c.beginPath(); c.moveTo(1, 33); c.lineTo(12, 31); c.quadraticCurveTo(17, 34, 15, 38); c.lineTo(1, 38); c.closePath();
-      fillStroke(c, P.gold, 2);
-    }],
-    ['pagdi', 42, 24, (c) => {
-      c.beginPath(); c.moveTo(4, 20); c.quadraticCurveTo(4, 2, 21, 3); c.quadraticCurveTo(38, 2, 38, 20); c.closePath();
-      fillStroke(c, P.rani);
-      c.strokeStyle = P.raniDark; c.lineWidth = 2.5;
-      c.beginPath(); c.moveTo(8, 16); c.quadraticCurveTo(20, 6, 34, 12); c.stroke();
-      c.beginPath(); c.moveTo(8, 10); c.quadraticCurveTo(22, 14, 30, 6); c.stroke();
-      circle(c, 21, 12, 3.5, P.gold, 2);
-      c.strokeStyle = P.cream; c.lineWidth = 3;
-      c.beginPath(); c.moveTo(21, 9); c.quadraticCurveTo(25, 0, 31, 1); c.stroke();
-    }],
     ['photographer_0', 48, 100, photographer(0)],
     ['photographer_1', 48, 100, photographer(1)],
     ['photographer_2', 48, 100, photographer(2)],

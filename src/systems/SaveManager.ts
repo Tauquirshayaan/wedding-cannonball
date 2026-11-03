@@ -79,8 +79,9 @@ class SaveManagerImpl {
   }
 
   reset() {
-    const { sfx, music, muted } = this.data;
-    this.data = { ...fresh(), sfx, music, muted };
+    // settings survive a progress reset; only levels and the tutorial flag are cleared
+    const { sfx, music, muted, voice } = this.data;
+    this.data = { ...fresh(), sfx, music, muted, voice };
     this.persist();
   }
 }

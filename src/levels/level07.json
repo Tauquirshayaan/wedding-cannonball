@@ -2,26 +2,26 @@
  "id": 7,
  "name": "Patakha Express",
  "tip": "Fly through the rockets to cross the vat",
- "width": 2600,
+ "width": 2260,
  "cannon": {
   "x": 130,
   "y": 600
  },
  "stage": {
-  "x": 2180,
+  "x": 1880,
   "y": 600,
-  "w": 340
+  "w": 320
  },
  "gift": {
-  "x": 1250,
+  "x": 1150,
   "y": 230
  },
  "damageTarget": 1500,
  "objects": [
   {
    "type": "vat",
-   "x": 1400,
-   "w": 1000
+   "x": 1320,
+   "w": 780
   },
   {
    "type": "rocket",
@@ -31,8 +31,8 @@
   },
   {
    "type": "rocket",
-   "x": 1550,
-   "y": 300,
+   "x": 1450,
+   "y": 320,
    "angle": -20
   },
   {
