@@ -79,7 +79,8 @@ async function winLevel(p, id) {
   check(await until(p, () => window.__hcScene.state === 'aim'), 'intro can be skipped (Space)');
 
   // real drag-to-aim launch
-  await p.mouse.move(640, 400); await p.mouse.down(); await p.mouse.move(470, 520, { steps: 10 }); await p.mouse.up();
+  // deliberately weak shot so it misses and the level stays in progress
+  await p.mouse.move(640, 400); await p.mouse.down(); await p.mouse.move(600, 420, { steps: 10 }); await p.mouse.up();
   check(await game(p, () => window.__hcScene.state === 'flight' && window.__hcScene.launchesLeft === 2), 'drag and release launches Lucky (3 → 2 launches)');
   await p.mouse.click(640, 300);
   check(await game(p, () => window.__hcScene['flailUsed'] === true), 'mid-air tap uses the flail');

@@ -16,7 +16,7 @@
   "x": 1180,
   "y": 300
  },
- "damageTarget": 900,
+ "damageTarget": 600,
  "objects": [
   {
    "type": "laddooPyramid",

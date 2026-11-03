@@ -83,10 +83,9 @@ class CommentaryImpl {
       const name = (v: SpeechSynthesisVoice) => (v.name + ' ' + v.voiceURI).toLowerCase();
       const male = (v: SpeechSynthesisVoice) => MALE_HINTS.some((h) => name(v).includes(h)) && !FEMALE_HINTS.some((h) => name(v).includes(h));
       const lang = (v: SpeechSynthesisVoice) => v.lang.toLowerCase().replace('_', '-');
+      // Hindi male voice only, speaking Devanagari: English voices (even en-IN) read Hinglish with a foreign accent
       const hi = vs.find((v) => lang(v).startsWith('hi') && male(v));
-      const enIn = vs.find((v) => lang(v) === 'en-in' && male(v));
-      // Indian male voices only; anything else stays silent rather than sounding wrong
-      this.voice = hi ?? enIn ?? null;
+      this.voice = hi ?? null;
       this.hindi = !!hi;
     };
     pick();

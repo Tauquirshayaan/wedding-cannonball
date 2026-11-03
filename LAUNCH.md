@@ -35,6 +35,17 @@ npm run build:all       # writes release/human-cannonball-<portal>.zip
 3. Already wired in: `firstFrameReady`, `gameReady`, `saveData/loadData` for progress, `onPause/onResume`, `onAudioEnabledChange`, and `sendScore` (the sum of best level scores).
 4. Note: Playables can run in portrait on phones. The game shows a "rotate your phone" prompt in portrait, so check that this meets their current certification rules.
 
+## Automated audit
+
+`npm run build:all && npm run test:e2e` runs 62 checks in headless Chromium:
+- menus, aiming, flail, cancel, pause and resume, restart, and pause on tab switch
+- a winning shot on all 10 levels, plus saving and reload
+- recovery from a tampered save
+- settings
+- the Poki, CrazyGames and YouTube SDK calls, using mock SDKs
+- the single-file build
+- zero console errors and zero CSP violations
+
 ## Bug checklist before every upload
 
 - [ ] Each level is clearable in 3 launches (`scripts` solver run, or play it)

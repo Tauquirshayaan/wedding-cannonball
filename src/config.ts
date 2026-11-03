@@ -6,7 +6,7 @@ export const STEP_MS = 1000 / 60; // fixed physics step
 
 export const PHYS = {
   gravityY: 1.0,
-  maxLaunchSpeed: 32, // px per step at 100% power
+  maxLaunchSpeed: 36, // px per step at 100% power
   velocityCap: 45, // px per step, stops tunnelling
   ragdollFriction: 0.6,
   ragdollRestitution: 0.2,
@@ -18,7 +18,7 @@ export const PHYS = {
   jointDamping: 0.05,
   minAngle: 10,
   maxAngle: 80,
-  dragForFullPower: 210, // screen px of drag for 100% power
+  dragForFullPower: 170, // screen px of drag for 100% power
   hitSpeed: 4, // impact speed that counts as a damaging hit
   shakeSpeed: 8, // impact speed that shakes the screen
   hitStopSpeed: 13, // impact speed that triggers a 60 ms freeze
