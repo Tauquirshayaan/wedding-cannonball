@@ -39,7 +39,7 @@ export const THEMES: Theme[] = [
   { id: 'ballroom', venue: 'Grand Ballroom', sky: ['#0b0820', '#1e1240', '#3a1a50'], stars: true, body: 'none', fireworks: true, far: 'windows', farColor: '#3a2a10', near: 'chandeliers', nearColor: '#c9971a', lights: ['#ffe9b8', '#f4c430', '#ffffff'], deco: 'crystals', ground: 'marble', groundColors: ['#e8e0d0', '#d8cfbe'], carpet: 0x7a1c2e },
 ];
 
-export interface Outfit { id: string; name: string; stars: number; style: 'kurta' | 'sherwani' | 'jacket' | 'suit' | 'tux'; main: string; dark: string; trim: string; legs: string; shoe: string; safa: string; safaDark: string; }
+export interface Outfit { id: string; name: string; stars: number; level?: number; style: 'kurta' | 'sherwani' | 'jacket' | 'suit' | 'tux'; main: string; dark: string; trim: string; legs: string; shoe: string; safa: string; safaDark: string; }
 
 export const OUTFITS: Outfit[] = [
   { id: 'o1', name: 'Marigold Kurta', stars: 0, style: 'kurta', main: '#f7a21b', dark: '#d9800b', trim: '#f4c430', legs: '#fff3d6', shoe: '#f4c430', safa: '#e6197e', safaDark: '#b0105e' },
@@ -57,10 +57,20 @@ export const OUTFITS: Outfit[] = [
   { id: 's2', name: 'Black Tuxedo', stars: 12, style: 'tux', main: '#1b1b22', dark: '#000000', trim: '#1b1b22', legs: '#1b1b22', shoe: '#000000', safa: '#1b1b22', safaDark: '#f4c430' },
   { id: 's3', name: 'Grey Suit', stars: 18, style: 'suit', main: '#7a808c', dark: '#5c616b', trim: '#2f6db5', legs: '#7a808c', shoe: '#3a2418', safa: '#5c616b', safaDark: '#2f6db5' },
   { id: 's4', name: 'White Party Suit', stars: 24, style: 'suit', main: '#f4f1ea', dark: '#d8d2c4', trim: '#e6197e', legs: '#f4f1ea', shoe: '#e8e0d0', safa: '#f4f1ea', safaDark: '#e6197e' },
+  // milestone rewards: clear the level to unlock
+  { id: 'm1', name: 'Bandmaster', stars: 0, level: 50, style: 'suit', main: '#c8102e', dark: '#8a0c20', trim: '#f4c430', legs: '#1b1b22', shoe: '#1b1b22', safa: '#c8102e', safaDark: '#f4c430' },
+  { id: 'm2', name: 'Royal Maharaja', stars: 0, level: 100, style: 'sherwani', main: '#f4c430', dark: '#c9971a', trim: '#c8102e', legs: '#c8102e', shoe: '#f4c430', safa: '#c8102e', safaDark: '#f4c430' },
+  { id: 'm3', name: 'DJ Night', stars: 0, level: 250, style: 'jacket', main: '#3a1a6a', dark: '#24104a', trim: '#00e5ff', legs: '#1b1b22', shoe: '#00e5ff', safa: '#00e5ff', safaDark: '#3a1a6a' },
+  { id: 'm4', name: 'Diamond Sherwani', stars: 0, level: 500, style: 'sherwani', main: '#eef4ff', dark: '#c8d6f0', trim: '#4a7bd0', legs: '#eef4ff', shoe: '#4a7bd0', safa: '#c0c8d8', safaDark: '#4a7bd0' },
+  { id: 'm5', name: 'Golden Legend', stars: 0, level: 1002, style: 'tux', main: '#d4a017', dark: '#a87d0c', trim: '#1b1b22', legs: '#1b1b22', shoe: '#d4a017', safa: '#d4a017', safaDark: '#1b1b22' },
 ];
 
-/** Campaign outfits rotate per level; suits are earned with stars and picked in the Wardrobe. */
-export const LEVEL_OUTFITS = OUTFITS.filter((o) => o.stars === 0);
+/** Campaign outfits rotate per level; suits are earned with stars, milestone outfits by clearing levels. */
+export const LEVEL_OUTFITS = OUTFITS.filter((o) => o.stars === 0 && !o.level);
+
+export function outfitUnlocked(o: Outfit, stars: number, cleared: (id: number) => boolean) {
+  return stars >= o.stars && (!o.level || cleared(o.level));
+}
 
 function make(scene: Phaser.Scene, key: string, w: number, h: number, draw: (c: Ctx, w: number, h: number) => void) {
   if (scene.textures.exists(key)) return;
@@ -397,7 +407,7 @@ export function themeFor(levelId: number) { return THEMES[(levelId - 1) % THEMES
 export function outfitFor(levelId: number) { return LEVEL_OUTFITS[(levelId - 1) % LEVEL_OUTFITS.length]; }
 
 /** The outfit Lucky wears: the player's Wardrobe choice if it is unlocked, otherwise the level's own. */
-export function chosenOutfit(levelId: number, choice: string, stars: number) {
+export function chosenOutfit(levelId: number, choice: string, stars: number, cleared: (id: number) => boolean) {
   const o = OUTFITS.find((x) => x.id === choice);
-  return o && stars >= o.stars ? o : outfitFor(levelId);
+  return o && outfitUnlocked(o, stars, cleared) ? o : outfitFor(levelId);
 }

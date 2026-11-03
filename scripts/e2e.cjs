@@ -129,6 +129,18 @@ async function winLevel(p, id) {
     const a = await snap(); const b = await snap(); return a === b;
   });
   check(same, 'a generated level is identical every time it loads (level 777)');
+  const boss = await winLevel(p, 50);
+  check(!!(boss && boss.result && boss.result.cleared && /^BOSS/.test(boss.result.name)), `boss level 50 generated and won (${boss && boss.result ? boss.result.name : 'not won'})`);
+  check(!!(boss && boss.result && boss.result.unlock === 'Bandmaster'), 'clearing level 50 unlocks the Bandmaster outfit');
+
+  console.log('\n[daily challenge]');
+  const today = await game(p, () => { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); });
+  const dw = await winLevel(p, 100000000 + today);
+  check(!!(dw && dw.result && dw.result.cleared && dw.result.daily && dw.result.daily.streak >= 1), `today's Daily Challenge generated and won (${dw && dw.result ? dw.result.name : 'not won'})`);
+  const dsame = await game(p, async (id) => { const g = window.__hcGame; const f = () => new Promise((r) => requestAnimationFrame(r)); const snap = async () => { if (g.scene.isActive('Result')) g.scene.stop('Result'); g.scene.start('Game', { levelId: id }); await f(); await f(); return JSON.stringify(window.__hcScene.level); }; return (await snap()) === (await snap()); }, 100000000 + today);
+  check(dsame, 'the Daily Challenge is the same level every time today');
+  const ds = await game(p, () => JSON.parse(localStorage.getItem('hc_wedding_save_v1')).daily);
+  check(ds && ds.streak >= 1 && ds.date > 0, `daily streak saved (${ds && ds.streak}-day)`);
   const saved = await game(p, () => JSON.parse(localStorage.getItem('hc_wedding_save_v1') || '{}'));
   check(saved.levels && [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].every((i) => saved.levels[i] && saved.levels[i].cleared), 'progress saved for levels 1–10');
 
@@ -185,7 +197,7 @@ async function winLevel(p, id) {
   check(await active(p, 'Wardrobe'), 'wardrobe opens');
   const totalStars = await game(p, () => Object.values(JSON.parse(localStorage.getItem('hc_wedding_save_v1')).levels).reduce((a, l) => a + l.stars, 0));
   // card 10 = Navy Suit (needs 6 stars), second row
-  await p.mouse.click(640 - 3.5 * 162 + 3 * 162, 440); // row 2, 4th card = Navy Suit (6 stars)
+  await p.mouse.click(640 - 4.5 * 126 + 1 * 126, 448); // row 2, 2nd card = Navy Suit (6 stars)
   await p.waitForTimeout(200);
   const chosen = await game(p, () => JSON.parse(localStorage.getItem('hc_wedding_save_v1')).outfit);
   check(totalStars >= 6 ? chosen === 's1' : chosen !== 's1', `suit unlock follows stars (${totalStars} stars → choice "${chosen}")`);
@@ -213,14 +225,15 @@ async function winLevel(p, id) {
   // settings: sliders, voice toggle, reset with confirm
   await game(p, () => { const t = window.__hcGame.scene.getScene('Title'); t.scene.pause(); t.scene.launch('Settings', { from: 'Title' }); });
   await p.waitForTimeout(300);
-  await p.mouse.click(640, 390);
+  await p.mouse.click(495, 345);
   await p.waitForTimeout(100);
-  await p.mouse.click(640, 465); await p.waitForTimeout(100); await p.mouse.click(640, 465);
+  await p.mouse.click(640, 479); await p.waitForTimeout(100); await p.mouse.click(640, 479);
   await p.waitForTimeout(200);
   const afterReset = await game(p, () => JSON.parse(localStorage.getItem('hc_wedding_save_v1')));
   check(afterReset.voice === false, 'voice commentary toggle saves');
+  check(afterReset.haptics === true && afterReset.lowfx === false, 'vibration and reduce-effects settings exist with sane defaults');
   check(Object.keys(afterReset.levels).length === 0, 'reset progress (tap twice) clears progress');
-  await p.mouse.click(640, 548);
+  await p.mouse.click(640, 560);
   check(await until(p, () => window.__hcGame.scene.isActive('Title')), 'settings Back returns to the title');
 
   check(errs.length === 0, `no console errors or CSP violations${errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''}`);
@@ -228,10 +241,10 @@ async function winLevel(p, id) {
 
   // ---------------------------------------------------------------- portal builds with mock SDKs
   const portals = [
-    { name: 'poki', sdk: /poki-sdk\.js/, mock: `window.__calls=[];const c=(n)=>(...a)=>{window.__calls.push(n);};window.PokiSDK={init:()=>{__calls.push('init');return Promise.resolve()},gameLoadingFinished:c('gameLoadingFinished'),gameplayStart:c('gameplayStart'),gameplayStop:c('gameplayStop'),commercialBreak:(f)=>{__calls.push('commercialBreak');f&&f();return Promise.resolve()},rewardedBreak:()=>Promise.resolve(false)};`,
-      expect: ['init', 'gameLoadingFinished', 'gameplayStart', 'gameplayStop', 'commercialBreak'] },
+    { name: 'poki', sdk: /poki-sdk\.js/, mock: `window.__calls=[];const c=(n)=>(...a)=>{window.__calls.push(n);};window.PokiSDK={init:()=>{__calls.push('init');return Promise.resolve()},gameLoadingFinished:c('gameLoadingFinished'),gameplayStart:c('gameplayStart'),gameplayStop:c('gameplayStop'),commercialBreak:(f)=>{__calls.push('commercialBreak');f&&f();return Promise.resolve()},rewardedBreak:(f)=>{__calls.push('rewardedBreak');f&&f();return Promise.resolve(true)}};`,
+      expect: ['init', 'gameLoadingFinished', 'gameplayStart', 'gameplayStop', 'commercialBreak', 'rewardedBreak'] },
     { name: 'crazygames', sdk: /crazygames-sdk-v3\.js/, mock: `window.__calls=[];const store={};window.CrazyGames={SDK:{init:()=>{__calls.push('init');return Promise.resolve()},environment:'crazygames',game:{loadingStart:()=>__calls.push('loadingStart'),loadingStop:()=>__calls.push('loadingStop'),gameplayStart:()=>__calls.push('gameplayStart'),gameplayStop:()=>__calls.push('gameplayStop'),happytime:()=>__calls.push('happytime')},ad:{requestAd:(t,cb)=>{__calls.push('requestAd:'+t);cb.adStarted&&cb.adStarted();setTimeout(()=>cb.adFinished&&cb.adFinished(),50)}},data:{getItem:(k)=>store[k]||null,setItem:(k,v)=>{__calls.push('data.setItem');store[k]=v}}}};`,
-      expect: ['init', 'loadingStart', 'loadingStop', 'gameplayStart', 'gameplayStop', 'requestAd:midgame', 'data.setItem'] },
+      expect: ['init', 'loadingStart', 'loadingStop', 'gameplayStart', 'gameplayStop', 'requestAd:midgame', 'requestAd:rewarded', 'data.setItem'] },
     { name: 'youtube', sdk: /game_api\/v1/, mock: `window.__calls=[];let saved='';window.__yt={};window.ytgame={game:{firstFrameReady:()=>__calls.push('firstFrameReady'),gameReady:()=>__calls.push('gameReady'),saveData:(d)=>{__calls.push('saveData');saved=d;return Promise.resolve()},loadData:()=>{__calls.push('loadData');return Promise.resolve(saved)}},engagement:{sendScore:()=>{__calls.push('sendScore');return Promise.resolve()}},system:{isAudioEnabled:()=>true,onAudioEnabledChange:(f)=>{__yt.audio=f},onPause:(f)=>{__yt.pause=f},onResume:(f)=>{__yt.resume=f},getLanguage:()=>Promise.resolve('en')}};`,
       expect: ['loadData', 'firstFrameReady', 'gameReady', 'saveData', 'sendScore'] },
   ];
@@ -256,6 +269,21 @@ async function winLevel(p, id) {
       await game(p, () => window.__yt.pause && window.__yt.pause());
       check(await game(p, () => window.__hcGame.loop.running === false || window.__hcGame.scene.isActive('Pause')), 'YouTube onPause pauses the game');
       await game(p, () => window.__yt.resume && window.__yt.resume());
+    }
+    if (portal.name !== 'youtube') {
+      // run out of launches for real (no fast-forward) and take the rewarded +1 launch
+      await game(p, () => { const g = window.__hcGame; for (const k of ['Result', 'Pause']) if (g.scene.isActive(k)) g.scene.stop(k); g.scene.start('Game', { levelId: 2 }); });
+      await p.waitForTimeout(400);
+      await game(p, () => { window.__hcScene.testSteps = 0; });
+      for (let i = 0; i < 3; i++) {
+        await until(p, () => ['intro', 'aim'].includes(window.__hcScene.state), null, 15000);
+        await game(p, () => window.__hcScene.testLaunch(10, 0.12));
+        await until(p, () => !['flight'].includes(window.__hcScene.state), null, 15000);
+      }
+      check(await until(p, () => window.__hcScene.state === 'offer', null, 15000), 'out of launches → rewarded "+1 launch" offer appears');
+      await p.waitForTimeout(1300); // the offer panel slides in after 0.7 s
+      await p.mouse.click(640, 390);
+      check(await until(p, () => window.__hcScene.state === 'aim' && window.__hcScene.launchesLeft === 1, null, 10000), 'watching the ad grants one more launch');
     }
     const calls = await game(p, () => window.__calls);
     for (const e of portal.expect) check(calls.includes(e), `SDK call: ${e}`);

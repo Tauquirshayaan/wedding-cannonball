@@ -1,5 +1,5 @@
 import type { LevelData } from './types';
-import { ENDLESS_BASE, generateRound, campaignLevel, campaignName } from './endless';
+import { ENDLESS_BASE, DAILY_BASE, generateRound, campaignLevel, campaignName, dailyLevel } from './endless';
 
 const files = import.meta.glob('./level*.json', { eager: true, import: 'default' }) as Record<string, LevelData>;
 
@@ -20,6 +20,7 @@ const cache = new Map<number, LevelData>();
 
 /** Campaign level by id (hand-made or generated), or a generated Endless Baraat round. */
 export function getLevel(id: number, run?: EndlessRun | null): LevelData {
+  if (id >= DAILY_BASE) return withRunoff(dailyLevel(id - DAILY_BASE));
   if (id >= ENDLESS_BASE && run) return withRunoff(generateRound(run.round, run.seed));
   id = Math.min(TOTAL_LEVELS, Math.max(1, Math.round(id)));
   if (id <= LEVELS.length) return LEVELS[id - 1];

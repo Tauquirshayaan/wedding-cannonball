@@ -10,10 +10,13 @@ export interface SaveData {
   tutorialDone: boolean;
   voice: boolean;
   outfit: string;
+  haptics: boolean;
+  lowfx: boolean;
+  daily: { last: number; streak: number; date: number; launches: number; damage: number };
   endless: { round: number; damage: number };
 }
 
-const fresh = (): SaveData => ({ v: 1, levels: {}, sfx: 0.8, music: 0.5, muted: false, tutorialDone: false, voice: true, outfit: 'auto', endless: { round: 0, damage: 0 } });
+const fresh = (): SaveData => ({ v: 1, levels: {}, sfx: 0.8, music: 0.5, muted: false, tutorialDone: false, voice: true, outfit: 'auto', haptics: true, lowfx: false, daily: { last: 0, streak: 0, date: 0, launches: 0, damage: 0 }, endless: { round: 0, damage: 0 } });
 
 const num = (v: unknown, lo: number, hi: number, d: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
 const bool = (v: unknown, d: boolean) => (typeof v === 'boolean' ? v : d);
@@ -26,7 +29,11 @@ function sanitize(raw: Record<string, unknown>): SaveData {
   out.muted = bool(raw.muted, false);
   out.tutorialDone = bool(raw.tutorialDone, false);
   out.voice = bool(raw.voice, true);
+  out.haptics = bool(raw.haptics, true);
+  out.lowfx = bool(raw.lowfx, false);
   out.outfit = typeof raw.outfit === 'string' && /^[a-z0-9]{1,8}$/.test(raw.outfit) ? raw.outfit : 'auto';
+  const dl = raw.daily as Record<string, unknown> | undefined;
+  if (dl && typeof dl === 'object') out.daily = { last: Math.round(num(dl.last, 0, 1e8, 0)), streak: Math.round(num(dl.streak, 0, 1e5, 0)), date: Math.round(num(dl.date, 0, 1e8, 0)), launches: Math.round(num(dl.launches, 0, 9, 0)), damage: Math.round(num(dl.damage, 0, 1e9, 0)) };
   const e = raw.endless as Record<string, unknown> | undefined;
   if (e && typeof e === 'object') out.endless = { round: Math.round(num(e.round, 0, 1e4, 0)), damage: Math.round(num(e.damage, 0, 1e9, 0)) };
   const lv = raw.levels;
@@ -85,6 +92,21 @@ class SaveManagerImpl {
     return newBest;
   }
 
+  /** Records a Daily Challenge clear: keeps today's best and the day streak. Returns true if it is today's best. */
+  recordDaily(date: number, launches: number, damage: number) {
+    const d = this.data.daily;
+    if (d.last !== date) {
+      const y = new Date(Math.floor(date / 10000), (Math.floor(date / 100) % 100) - 1, (date % 100) - 1);
+      const yesterday = y.getFullYear() * 10000 + (y.getMonth() + 1) * 100 + y.getDate();
+      d.streak = d.last === yesterday ? d.streak + 1 : 1;
+      d.last = date;
+    }
+    const better = d.date !== date || launches < d.launches || (launches === d.launches && damage > d.damage);
+    if (better) { d.date = date; d.launches = launches; d.damage = damage; }
+    this.persist();
+    return better;
+  }
+
   /** Records a finished Endless run; returns true if it beats the best. */
   recordEndless(round: number, damage: number) {
     const b = this.data.endless;
@@ -95,8 +117,8 @@ class SaveManagerImpl {
 
   reset() {
     // settings survive a progress reset; only levels and the tutorial flag are cleared
-    const { sfx, music, muted, voice } = this.data;
-    this.data = { ...fresh(), sfx, music, muted, voice };
+    const { sfx, music, muted, voice, haptics, lowfx, outfit } = this.data;
+    this.data = { ...fresh(), sfx, music, muted, voice, haptics, lowfx, outfit };
     this.persist();
   }
 }

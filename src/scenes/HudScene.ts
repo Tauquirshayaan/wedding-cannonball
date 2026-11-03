@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_W, FONT, PHYS } from '../config';
 import { bus } from '../systems/bus';
+import { Button } from '../ui/Button';
 import { rupees } from '../systems/DamageTracker';
 import type { LevelData } from '../levels/types';
 
@@ -94,6 +95,28 @@ export class HudScene extends Phaser.Scene {
     on('hud:power', (p: number | null) => this.drawPower(p));
     on('hud:flail', () => this.flailHint.setAlpha(0));
     on('hud:hide', () => this.root.setVisible(false));
+    on('hud:offer', () => {
+      const dim = this.add.rectangle(0, 0, GAME_W, 720, 0x000000, 0.45).setOrigin(0).setInteractive();
+      const g = this.add.graphics();
+      g.fillStyle(0x2a1420, 1); g.fillRoundedRect(GAME_W / 2 - 300, 214, 600, 300, 28);
+      g.fillStyle(0x7a1c2e, 1); g.fillRoundedRect(GAME_W / 2 - 300, 206, 600, 300, 28);
+      g.lineStyle(5, 0xf4c430, 1); g.strokeRoundedRect(GAME_W / 2 - 292, 214, 584, 284, 22);
+      const t1 = this.add.text(GAME_W / 2, 262, 'Out of launches!', { fontFamily: FONT, fontSize: '40px', color: '#f4c430', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 7 }).setOrigin(0.5);
+      const t2 = this.add.text(GAME_W / 2, 314, 'Watch a short ad for one more launch?', { fontFamily: FONT, fontSize: '24px', color: '#ffffff' }).setOrigin(0.5);
+      const items: Phaser.GameObjects.GameObject[] = [dim, g, t1, t2];
+      const close = () => items.forEach((o) => o.destroy());
+      items.push(new Button(this, GAME_W / 2, 390, '▶ +1 Launch', () => { close(); bus.emit('offer:accept'); }, { w: 320, h: 70, size: 30, color: 0x3e9b3a }));
+      items.push(new Button(this, GAME_W / 2, 462, 'No thanks', () => { close(); bus.emit('offer:decline'); }, { w: 220, h: 50, size: 22, color: 0x5a1020 }));
+    });
+    on('hud:boss', () => {
+      const g = this.add.graphics();
+      g.fillStyle(0xf4c430, 1); g.fillRoundedRect(GAME_W / 2 - 120, 90, 240, 40, 14);
+      g.lineStyle(3, 0x2a1420, 1); g.strokeRoundedRect(GAME_W / 2 - 120, 90, 240, 40, 14);
+      const t = this.add.text(GAME_W / 2, 110, '★ BOSS LEVEL ★', { fontFamily: FONT, fontSize: '22px', color: '#2a1420', fontStyle: 'bold' }).setOrigin(0.5);
+      const c = this.add.container(0, 0, [g, t]);
+      this.root.add(c);
+      this.tweens.add({ targets: c, alpha: 0.6, duration: 600, yoyo: true, repeat: -1 });
+    });
     on('hud:run', (run: { round: number; damage: number }) => {
       const t = this.add.text(30, 98, `∞ Run total ${rupees(run.damage)}`, { fontFamily: FONT, fontSize: '18px', color: '#ffe9b8', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 4 });
       this.root.add(t);
@@ -167,7 +190,7 @@ export class HudScene extends Phaser.Scene {
 
   private init2(level: LevelData, launches: number) {
     this.level = level;
-    const name = this.add.text(30, 30, level.id >= 100000 ? `Round ${level.id - 100000}: ${level.name}` : `${level.id}. ${level.name}`, { fontFamily: FONT, fontSize: '24px', color: '#ffffff', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 5 }).setOrigin(0, 0.5);
+    const name = this.add.text(30, 30, level.id >= 100_000_000 ? level.name : level.id >= 100000 ? `Round ${level.id - 100000}: ${level.name}` : `${level.id}. ${level.name}`, { fontFamily: FONT, fontSize: '24px', color: '#ffffff', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 5 }).setOrigin(0, 0.5);
     this.root.add(name);
     for (let i = 0; i < PHYS.launchesPerLevel; i++) {
       const ic = this.add.image(46 + i * 40, 62, 'cannon_icon').setScale(0.9);

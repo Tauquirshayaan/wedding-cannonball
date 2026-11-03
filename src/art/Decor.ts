@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GROUND_Y } from '../config';
 import type { LevelData } from '../levels/types';
 import type { Theme } from './Themes';
+import { SaveManager } from '../systems/SaveManager';
 
 // Non-colliding wedding décor and 2.5D depth: stage flower arch and pillars, lamps, balloons,
 // a bobbing crowd that cheers, twinkling overhead lights and soft shadows.
@@ -117,9 +118,10 @@ export function decorateLevel(scene: Phaser.Scene, L: LevelData, theme: Theme): 
     scene.tweens.add({ targets: b, angle: { from: -3, to: 3 }, duration: 1800 + Math.random() * 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
   }
 
+  const low = SaveManager.data.lowfx; // 'Reduce effects': no light strings or crowd
   // twinkling overhead light strings (two phases alternating)
   const strings: Phaser.GameObjects.Graphics[] = [];
-  for (let phase = 0; phase < 2; phase++) {
+  for (let phase = 0; phase < (low ? 0 : 2); phase++) {
     const g = scene.add.graphics().setDepth(1).setScrollFactor(0.95, 1);
     for (let x0 = -200; x0 < L.width + 400; x0 += 320) {
       for (let i = 0; i <= 12; i++) {
@@ -139,15 +141,17 @@ export function decorateLevel(scene: Phaser.Scene, L: LevelData, theme: Theme): 
     for (let i = 0; i <= 16; i++) { const t = i / 16; const x = x0 + t * 320, y = 40 + Math.sin(t * Math.PI) * 46; if (i) wire.lineTo(x, y); else wire.moveTo(x, y); }
     wire.strokePath();
   }
-  scene.tweens.add({ targets: strings[0], alpha: { from: 1, to: 0.35 }, duration: 600, yoyo: true, repeat: -1 });
-  scene.tweens.add({ targets: strings[1], alpha: { from: 0.35, to: 1 }, duration: 600, yoyo: true, repeat: -1 });
+  if (strings.length) {
+    scene.tweens.add({ targets: strings[0], alpha: { from: 1, to: 0.35 }, duration: 600, yoyo: true, repeat: -1 });
+    scene.tweens.add({ targets: strings[1], alpha: { from: 0.35, to: 1 }, duration: 600, yoyo: true, repeat: -1 });
+  }
 
   // crowd behind the play area (slight parallax), bobbing to the music
   const crowd: Phaser.GameObjects.Image[] = [];
   // crowd colour: the venue's far colour lifted towards white so silhouettes read against the background
   const fc = Phaser.Display.Color.HexStringToColor(theme.farColor);
   const tint = Phaser.Display.Color.GetColor(Math.round(fc.red + (255 - fc.red) * 0.35), Math.round(fc.green + (255 - fc.green) * 0.3), Math.round(fc.blue + (255 - fc.blue) * 0.35));
-  for (let x = L.cannon.x + 200; x < s.x + s.w + 200; x += 70 + Math.random() * 60) {
+  for (let x = L.cannon.x + 200; !low && x < s.x + s.w + 200; x += 70 + Math.random() * 60) {
     const gimg = scene.add.image(x, GROUND_Y + 8, `guest_${Math.floor(Math.random() * 3)}`).setOrigin(0.5, 1)
       .setScrollFactor(0.9, 1).setDepth(0.5).setTint(tint).setAlpha(0.9).setScale(0.75 + Math.random() * 0.25).setFlipX(Math.random() < 0.5);
     scene.tweens.add({ targets: gimg, y: GROUND_Y + 2, duration: 380 + Math.random() * 200, yoyo: true, repeat: -1, delay: Math.random() * 400, ease: 'Sine.inOut' });

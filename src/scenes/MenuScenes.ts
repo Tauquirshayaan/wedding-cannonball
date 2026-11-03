@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_W, GAME_H, GROUND_Y, FONT } from '../config';
 import { generateCoreTextures } from '../art/Textures';
-import { makeAllOutfits, themeFor, OUTFITS } from '../art/Themes';
+import { makeAllOutfits, themeFor, OUTFITS, outfitUnlocked } from '../art/Themes';
 import { Button, panel, title } from '../ui/Button';
 import { SaveManager } from '../systems/SaveManager';
 import { AudioManager } from '../systems/AudioManager';
@@ -9,7 +9,7 @@ import { Analytics } from '../systems/Analytics';
 import { rupees } from '../systems/DamageTracker';
 import { platform } from '../platform/Platform';
 import { TOTAL_LEVELS, EndlessRun, levelName } from '../levels';
-import { ENDLESS_BASE, ENDLESS_UNLOCK_AFTER } from '../levels/endless';
+import { ENDLESS_BASE, ENDLESS_UNLOCK_AFTER, DAILY_BASE, todayKey } from '../levels/endless';
 import type { ResultData } from './GameScene';
 
 const TIPS = [
@@ -191,10 +191,17 @@ export class LevelSelectScene extends Phaser.Scene {
     new Button(this, 110, 660, '◀ Back', () => this.scene.start('Title'), { w: 170, h: 60, size: 26, color: 0x7a1c2e });
     const endlessOpen = SaveManager.level(ENDLESS_UNLOCK_AFTER).cleared;
     const eb = SaveManager.data.endless;
-    const endless = new Button(this, GAME_W / 2, 660, endlessOpen ? '∞ ENDLESS BARAAT' : `∞ Endless · clear level ${ENDLESS_UNLOCK_AFTER}`, () => { if (endlessOpen) newEndlessRun(this); },
-      { w: 420, h: 64, size: endlessOpen ? 28 : 22, color: endlessOpen ? 0xf7a21b : 0x3a2f5a });
+    const endless = new Button(this, GAME_W / 2 - 30, 660, endlessOpen ? '∞ ENDLESS' : `∞ Endless · clear ${ENDLESS_UNLOCK_AFTER}`, () => { if (endlessOpen) newEndlessRun(this); },
+      { w: 300, h: 64, size: endlessOpen ? 28 : 20, color: endlessOpen ? 0xf7a21b : 0x3a2f5a });
     if (!endlessOpen) endless.setEnabled(false);
-    if (endlessOpen && eb.round > 0) this.add.text(GAME_W / 2 + 230, 660, `Best: round ${eb.round}\n${rupees(eb.damage)}`, { fontFamily: FONT, fontSize: '18px', color: '#ffe9b8', fontStyle: 'bold' }).setOrigin(0, 0.5);
+    if (endlessOpen && eb.round > 0) this.add.text(GAME_W / 2 - 30, 616, `Best: round ${eb.round} · ${rupees(eb.damage)}`, { fontFamily: FONT, fontSize: '16px', color: '#ffe9b8', fontStyle: 'bold' }).setOrigin(0.5);
+    const today = todayKey();
+    const dd = SaveManager.data.daily;
+    const doneToday = dd.date === today;
+    const daily = new Button(this, GAME_W / 2 + 300, 660, endlessOpen ? (doneToday ? '✓ DAILY' : '★ DAILY') : `Daily · clear ${ENDLESS_UNLOCK_AFTER}`, () => { if (endlessOpen) { Analytics.track('daily_start'); startLevel(this, DAILY_BASE + today); } },
+      { w: 260, h: 64, size: endlessOpen ? 28 : 20, color: endlessOpen ? 0xe6197e : 0x3a2f5a });
+    if (!endlessOpen) daily.setEnabled(false);
+    if (endlessOpen && dd.streak > 0) this.add.text(GAME_W / 2 + 300, 616, `🔥 ${dd.streak}-day streak${doneToday ? ` · best ${dd.launches}/3` : ''}`, { fontFamily: FONT, fontSize: '16px', color: '#ffe9b8', fontStyle: 'bold' }).setOrigin(0.5);
     new Button(this, GAME_W - 190, 56, 'Wardrobe', () => this.scene.start('Wardrobe', { from: 'LevelSelect' }), { w: 180, h: 56, size: 22, color: 0x3e9b3a });
     soundToggle(this, GAME_W - 56, 56);
     this.input.keyboard?.once('keydown-ESC', () => this.scene.start('Title'));
@@ -238,24 +245,27 @@ export class SettingsScene extends Phaser.Scene {
     this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.6).setOrigin(0).setInteractive();
     panel(this, GAME_W / 2, GAME_H / 2, 620, 540);
     title(this, GAME_W / 2, 140, 'Settings', 52);
-    this.slider(205, 'Sound effects', SaveManager.data.sfx, (v) => { SaveManager.data.sfx = v; AudioManager.setSfx(v); AudioManager.play('pop'); });
-    this.slider(295, 'Music', SaveManager.data.music, (v) => { SaveManager.data.music = v; AudioManager.setMusic(v); });
+    this.slider(195, 'Sound effects', SaveManager.data.sfx, (v) => { SaveManager.data.sfx = v; AudioManager.setSfx(v); AudioManager.play('pop'); });
+    this.slider(270, 'Music', SaveManager.data.music, (v) => { SaveManager.data.music = v; AudioManager.setMusic(v); });
+    const toggle = (x: number, y: number, w: number, label: string, key: 'voice' | 'haptics' | 'lowfx', color: number) => {
+      const text = () => `${label}: ${SaveManager.data[key] ? 'ON' : 'OFF'}`;
+      const b = new Button(this, x, y, text(), () => { SaveManager.data[key] = !SaveManager.data[key]; SaveManager.persist(); b.setText(text()); }, { w, h: 54, size: 20, color });
+      return b;
+    };
+    toggle(GAME_W / 2 - 145, 345, 270, 'Voice', 'voice', 0x3e9b3a);
+    toggle(GAME_W / 2 + 145, 345, 270, 'Vibration', 'haptics', 0x3e9b3a);
+    toggle(GAME_W / 2, 412, 380, 'Reduce effects', 'lowfx', 0x2f6db5);
     let confirm = false;
-    const voiceLabel = () => `Voice commentary: ${SaveManager.data.voice ? 'ON' : 'OFF'}`;
-    const voiceBtn = new Button(this, GAME_W / 2, 390, voiceLabel(), () => {
-      SaveManager.data.voice = !SaveManager.data.voice; SaveManager.persist();
-      voiceBtn.setText(voiceLabel());
-    }, { w: 380, h: 56, size: 22, color: 0x3e9b3a });
-    const reset = new Button(this, GAME_W / 2, 465, 'Reset progress', () => {
+    const reset = new Button(this, GAME_W / 2, 479, 'Reset progress', () => {
       if (!confirm) { confirm = true; reset.setText('Tap again to confirm'); return; }
       SaveManager.reset();
       reset.setText('Progress reset!').setEnabled(false);
-    }, { w: 380, h: 60, size: 24, color: 0x5a1020 });
-    new Button(this, GAME_W / 2, 548, 'Back', () => {
+    }, { w: 380, h: 54, size: 22, color: 0x5a1020 });
+    new Button(this, GAME_W / 2, 560, 'Back', () => {
       SaveManager.persist();
       this.scene.stop();
       if (data.from === 'Title') this.scene.start('Title'); else this.scene.resume(data.from);
-    }, { w: 220, h: 64, size: 30 });
+    }, { w: 220, h: 60, size: 28 });
   }
 
   private slider(y: number, label: string, value: number, onChange: (v: number) => void) {
@@ -282,6 +292,7 @@ export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
   create(d: ResultData) {
     if (d.run) { this.endless(d); return; }
+    if (d.daily) { this.dailyResult(d); return; }
     const L = { id: d.levelId, name: d.name };
     this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.5).setOrigin(0).setInteractive();
     panel(this, GAME_W / 2, GAME_H / 2, 700, 620, d.cleared ? 0x7a1c2e : 0x3a2f5a);
@@ -304,6 +315,10 @@ export class ResultScene extends Phaser.Scene {
     const dmg = this.add.text(GAME_W / 2, 350, `Shaadi Damage: ₹0`, { fontFamily: FONT, fontSize: '32px', color: '#f4c430', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 6 }).setOrigin(0.5);
     const counter = { v: 0 };
     this.tweens.add({ targets: counter, v: d.damage, duration: 900, delay: 200, ease: 'Cubic.out', onUpdate: () => dmg.setText(`Shaadi Damage: ${rupees(counter.v)}`) });
+    if (d.unlock) {
+      const u = this.add.text(GAME_W / 2, 172, `NEW OUTFIT UNLOCKED: ${d.unlock}!`, { fontFamily: FONT, fontSize: '22px', color: '#7dff9a', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 5 }).setOrigin(0.5);
+      this.tweens.add({ targets: u, scale: 1.08, duration: 450, yoyo: true, repeat: -1 });
+    }
     if (d.cleared) {
       const rec = SaveManager.level(d.levelId);
       this.add.text(GAME_W / 2, 395, `Score ${d.score.toLocaleString('en-IN')}   ·   Best ${rec.best.toLocaleString('en-IN')}`, { fontFamily: FONT, fontSize: '24px', color: '#ffffff' }).setOrigin(0.5);
@@ -340,6 +355,36 @@ export class ResultScene extends Phaser.Scene {
     buttons.push(share);
     this.input.keyboard?.once('keydown-R', () => { void go(d.levelId); });
     if (hasNext) this.input.keyboard?.once('keydown-ENTER', () => { void go(d.levelId + 1); });
+  }
+
+  /** Result screen for the Daily Challenge. */
+  private dailyResult(d: ResultData) {
+    const dl = d.daily!;
+    this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.5).setOrigin(0).setInteractive();
+    panel(this, GAME_W / 2, GAME_H / 2, 700, 620, d.cleared ? 0x7a1c2e : 0x3a2f5a);
+    title(this, GAME_W / 2, 100, d.cleared ? 'Daily Cleared!' : 'Not Today… Yet!', 52, d.cleared ? '#f4c430' : '#ff9ad0');
+    this.add.text(GAME_W / 2, 156, d.name, { fontFamily: FONT, fontSize: '24px', color: '#ffe9b8' }).setOrigin(0.5);
+    const best = SaveManager.data.daily;
+    const rows = d.cleared
+      ? [['Landed in', `${dl.launches}/3 launches`], ['Shaadi Damage', rupees(d.damage)], ['Streak', `🔥 ${dl.streak} day${dl.streak === 1 ? '' : 's'}`], ["Today's best", best.date === dl.date ? `${best.launches}/3 · ${rupees(best.damage)}` : '–']]
+      : [['Shaadi Damage', rupees(d.damage)], ['Streak', `🔥 ${best.streak} day${best.streak === 1 ? '' : 's'}`], ['Tip', 'Retry as often as you like today']];
+    rows.forEach(([k, v], i) => {
+      this.add.text(GAME_W / 2 - 230, 220 + i * 54, k, { fontFamily: FONT, fontSize: '26px', color: '#ffe9b8' }).setOrigin(0, 0.5);
+      this.add.text(GAME_W / 2 + 230, 220 + i * 54, v, { fontFamily: FONT, fontSize: '26px', color: '#f4c430', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 5 }).setOrigin(1, 0.5);
+    });
+    if (d.cleared && dl.best) {
+      const nb = this.add.text(GAME_W / 2, 445, "TODAY'S BEST!", { fontFamily: FONT, fontSize: '26px', color: '#7dff9a', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 5 }).setOrigin(0.5);
+      this.tweens.add({ targets: nb, scale: 1.1, duration: 400, yoyo: true, repeat: -1 });
+    }
+    const buttons: Button[] = [];
+    buttons.push(new Button(this, GAME_W / 2, 530, '↻ Try Again', async () => {
+      buttons.forEach((b) => b.setEnabled(false));
+      AudioManager.setExternalMute(true); await platform.commercialBreak(); AudioManager.setExternalMute(false);
+      startLevel(this, d.levelId);
+    }, { w: 300, h: 74, size: 32, color: d.cleared ? 0xf7a21b : 0xe6197e }));
+    buttons.push(new Button(this, GAME_W / 2 - 130, 622, 'Levels', () => { this.scene.stop('Hud'); this.scene.stop('Game'); this.scene.start('LevelSelect'); }, { w: 220, h: 60, size: 26, color: 0x7a1c2e }));
+    const share = new Button(this, GAME_W / 2 + 130, 622, 'Share', () => void this.share(d, share), { w: 220, h: 60, size: 26, color: 0x3e9b3a });
+    buttons.push(share);
   }
 
   /** Result screen for an Endless Baraat round. */
@@ -390,7 +435,9 @@ export class ResultScene extends Phaser.Scene {
   private async share(d: ResultData, btn: Button) {
     Analytics.track('share_click', { level: d.levelId });
     const link = platform.allowExternalLinks ? ' ' + window.location.href.split('?')[0] : '';
-    const text = d.run
+    const text = d.daily
+      ? `Human Cannonball ${d.name}\n🎯 ${d.cleared ? `Landed in ${d.daily.launches}/3` : 'Missed the stage'} · 💥 ${rupees(d.damage)} · 🔥 ${d.cleared ? d.daily.streak : SaveManager.data.daily.streak}-day streak${link}`
+      : d.run
       ? `I survived ${d.cleared ? d.run.round : d.run.round - 1} rounds of Endless Baraat with ${rupees(d.run.damage)} of Shaadi Damage in Human Cannonball: Wedding Edition 🎆 Can you beat it?${link}`
       : `I caused ${rupees(d.damage)} of Shaadi Damage on Level ${d.levelId} of Human Cannonball: Wedding Edition 🎆 Can you beat it?${link}`;
     try {
@@ -415,14 +462,15 @@ export class WardrobeScene extends Phaser.Scene {
     backdrop(this, 0.55);
     title(this, GAME_W / 2, 60, "Lucky's Wardrobe", 50);
     const stars = SaveManager.totalStars();
-    this.add.text(GAME_W / 2, 108, `★ ${stars}  ·  earn stars to unlock suits`, { fontFamily: FONT, fontSize: '22px', color: '#ffe9b8', fontStyle: 'bold' }).setOrigin(0.5);
-    const items: { id: string; name: string; stars: number }[] = [{ id: 'auto', name: 'Auto (new look each level)', stars: 0 }, ...OUTFITS];
-    const cw = 150, ch = 150, cols = 8;
+    this.add.text(GAME_W / 2, 108, `★ ${stars}  ·  stars unlock suits · milestone levels unlock special outfits`, { fontFamily: FONT, fontSize: '22px', color: '#ffe9b8', fontStyle: 'bold' }).setOrigin(0.5);
+    const items: { id: string; name: string; stars: number; level?: number }[] = [{ id: 'auto', name: 'Auto (new look each level)', stars: 0 }, ...OUTFITS];
+    const isLocked = (it: { stars: number; level?: number }) => !outfitUnlocked({ ...OUTFITS[0], ...it }, stars, (i) => SaveManager.level(i).cleared);
+    const cw = 114, ch = 158, cols = 10;
     const x0 = GAME_W / 2 - ((cols - 1) * (cw + 12)) / 2;
     const cards: Phaser.GameObjects.Graphics[] = [];
     const draw = () => cards.forEach((g, i) => {
       const it = items[i];
-      const locked = stars < it.stars;
+      const locked = isLocked(it);
       const sel = SaveManager.data.outfit === it.id;
       g.clear();
       g.fillStyle(0x2a1420, 1); g.fillRoundedRect(-cw / 2, -ch / 2 + 6, cw, ch, 18);
@@ -434,7 +482,7 @@ export class WardrobeScene extends Phaser.Scene {
       const g = this.add.graphics();
       cards.push(g);
       const parts: Phaser.GameObjects.GameObject[] = [g];
-      const locked = stars < it.stars;
+      const locked = isLocked(it);
       if (it.id === 'auto') {
         parts.push(this.add.text(0, -14, '?', { fontFamily: FONT, fontSize: '64px', color: '#f4c430', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 8 }).setOrigin(0.5));
       } else {
@@ -448,7 +496,7 @@ export class WardrobeScene extends Phaser.Scene {
       parts.push(this.add.text(0, ch / 2 - 22, it.name, { fontFamily: FONT, fontSize: '14px', color: '#ffffff', fontStyle: 'bold', align: 'center', wordWrap: { width: cw - 12 } }).setOrigin(0.5));
       if (locked) {
         parts.push(this.add.image(0, -20, 'lock'));
-        parts.push(this.add.text(0, 14, `★ ${it.stars}`, { fontFamily: FONT, fontSize: '22px', color: '#f4c430', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 5 }).setOrigin(0.5));
+        parts.push(this.add.text(0, 14, it.level ? `Clear ${it.level}` : `★ ${it.stars}`, { fontFamily: FONT, fontSize: '22px', color: '#f4c430', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 5 }).setOrigin(0.5));
       }
       const card = this.add.container(x, y, parts).setSize(cw, ch);
       if (!locked) {

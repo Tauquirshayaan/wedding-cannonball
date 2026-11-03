@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import { GAME_W, GAME_H, GROUND_Y, PHYS, STEP_MS, FONT } from '../config';
 import { OBJ } from '../data/objectTypes';
 import { getLevel, EndlessRun } from '../levels';
-import { ENDLESS_BASE } from '../levels/endless';
-import { themeFor, chosenOutfit, themeTextures, releaseThemeTextures } from '../art/Themes';
+import { ENDLESS_BASE, DAILY_BASE } from '../levels/endless';
+import { themeFor, chosenOutfit, themeTextures, releaseThemeTextures, OUTFITS } from '../art/Themes';
 import type { LevelData } from '../levels/types';
 import { buildLevel, LevelWorld, Prop, Bouncer } from '../objects/LevelBuilder';
 import { Ragdoll } from '../objects/Ragdoll';
@@ -15,12 +15,13 @@ import { Commentary, Speaker } from '../systems/Commentary';
 import { SaveManager } from '../systems/SaveManager';
 import { Analytics } from '../systems/Analytics';
 import { bus } from '../systems/bus';
+import { buzz } from '../systems/Haptics';
 import { platform } from '../platform/Platform';
 
-type State = 'intro' | 'aim' | 'flight' | 'between' | 'ending' | 'replay' | 'done';
+type State = 'intro' | 'aim' | 'flight' | 'between' | 'offer' | 'ending' | 'replay' | 'done';
 
 export interface ResultData {
-  levelId: number; name: string; run?: EndlessRun | null; recordRun?: boolean; cleared: boolean; stars: number; damage: number; score: number; launchesLeft: number;
+  levelId: number; name: string; unlock?: string; daily?: { date: number; launches: number; streak: number; best: boolean }; run?: EndlessRun | null; recordRun?: boolean; cleared: boolean; stars: number; damage: number; score: number; launchesLeft: number;
   gift: boolean; newBest: boolean; badge: string | null; target: number; hasGift: boolean;
 }
 
@@ -103,6 +104,7 @@ export class GameScene extends Phaser.Scene {
     this.tutorial = false;
     this.replayImgs = {};
     this.stuck = false;
+    this.extraUsed = false;
   }
 
   create() {
@@ -113,7 +115,7 @@ export class GameScene extends Phaser.Scene {
     // --- backdrop layers ---
     const theme = themeFor(L.id);
     const tk = themeTextures(this, theme);
-    Ragdoll.outfit = chosenOutfit(L.id, SaveManager.data.outfit, SaveManager.totalStars()).id;
+    Ragdoll.outfit = chosenOutfit(L.id, SaveManager.data.outfit, SaveManager.totalStars(), (i) => SaveManager.level(i).cleared).id;
     const sky = this.add.image(GAME_W / 2, GAME_H / 2, tk.sky).setScrollFactor(0).setDepth(-10);
     this.add.tileSprite(-600, GROUND_Y - 290, L.width + 3000, 300, tk.far).setOrigin(0).setScrollFactor(0.2, 0.35).setDepth(-9);
     this.add.tileSprite(-600, GROUND_Y - 320, L.width + 3000, 330, tk.near).setOrigin(0).setScrollFactor(0.5, 0.7).setDepth(-8);
@@ -133,7 +135,7 @@ export class GameScene extends Phaser.Scene {
     // 2.5D: soft shadows under Lucky and the people
     this.luckyShadow = addShadow(this, 70).setVisible(false);
     this.propShadows = [];
-    for (const p of this.world.props) {
+    if (!SaveManager.data.lowfx) for (const p of this.world.props) {
       if (p.type === 'photographer' || p.type === 'relative') this.propShadows.push({ img: addShadow(this, 64), prop: p });
       else if (p.type === 'sofa') addShadow(this, 190).setPosition(p.img.x, GROUND_Y + 1);
       else if (p.type === 'cake' && p.img.y > GROUND_Y - 40) addShadow(this, 170).setPosition(p.img.x, GROUND_Y + 1);
@@ -179,6 +181,8 @@ export class GameScene extends Phaser.Scene {
     const on = (e: string, fn: (...a: unknown[]) => void) => { bus.on(e, fn); this.hudHandlers.push([e, fn]); };
     on('hud:pause', () => this.pauseGame());
     on('hud:restart', () => this.restart());
+    on('offer:accept', () => void this.acceptOffer());
+    on('offer:decline', () => this.declineOffer());
     this.events.once('shutdown', () => {
       for (const [e, fn] of this.hudHandlers) bus.off(e, fn);
       this.hudHandlers = [];
@@ -206,6 +210,7 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(10, () => {
       bus.emit('hud:init', { level: L, launches: this.launchesLeft });
       bus.emit('hud:toast', L.name, `${theme.venue} · ${L.tip}`);
+      if (L.name.startsWith('BOSS')) { bus.emit('hud:boss'); AudioManager.play('ohh'); }
     });
     this.camTween = this.tweens.add({
       targets: this.cam, x: this.aimCamX(), y: this.aimCamY(), zoom: this.fitZoom, duration: 1300, delay: 500, ease: 'Sine.inOut',
@@ -390,6 +395,7 @@ export class GameScene extends Phaser.Scene {
     this.setBarrelAngle(angle);
     // juice
     AudioManager.play('boom');
+    buzz(20);
     AudioManager.play('slide');
     this.time.delayedCall(120, () => this.react('launch', m.x, m.y - 40, 'aah', true));
     const mz = this.muzzle(angle, 120);
@@ -438,9 +444,38 @@ export class GameScene extends Phaser.Scene {
         if (this.state !== 'between') return;
         this.camTween = this.tweens.add({ targets: this.cam, x: this.aimCamX(), y: this.aimCamY(), zoom: this.fitZoom, duration: this.testSteps ? 10 : 700, ease: 'Sine.inOut', onComplete: () => this.enterAim() });
       });
+    } else if (!this.extraUsed && !this.testSteps && platform.hasRewarded()) {
+      // out of launches: offer one more for an opt-in rewarded ad (once per attempt)
+      this.state = 'offer';
+      this.time.delayedCall(700, () => bus.emit('hud:offer'));
     } else {
       this.levelFail();
     }
+  }
+
+  private extraUsed = false;
+
+  private async acceptOffer() {
+    if (this.state !== 'offer') return;
+    this.extraUsed = true;
+    Analytics.track('rewarded_offer', { accepted: true });
+    const ok = await platform.rewardedBreak();
+    if (!this.scene.isActive() || this.state !== 'offer') return;
+    if (!ok) { this.levelFail(); return; }
+    Analytics.track('rewarded_granted', { level: this.level.id });
+    platform.gameplayStart();
+    this.launchesLeft = 1;
+    this.state = 'between';
+    bus.emit('hud:launches', 1);
+    bus.emit('hud:toast', 'Bonus launch!', 'One more try');
+    this.camTween = this.tweens.add({ targets: this.cam, x: this.aimCamX(), y: this.aimCamY(), zoom: this.fitZoom, duration: 600, ease: 'Sine.inOut', onComplete: () => this.enterAim() });
+  }
+
+  private declineOffer() {
+    if (this.state !== 'offer') return;
+    this.extraUsed = true;
+    Analytics.track('rewarded_offer', { accepted: false });
+    this.levelFail();
   }
 
   private levelClear() {
@@ -458,7 +493,10 @@ export class GameScene extends Phaser.Scene {
     if (this.damage.total < 500) badge = 'Shareef Guest';
     if (this.damage.total >= L.damageTarget * 2) badge = 'Baraat Wrecker';
     if (launchesUsed === 1) badge = badge === 'Baraat Wrecker' ? badge : 'Ek Shot';
-    const newBest = this.run ? false : SaveManager.record(L.id, true, stars, score);
+    const isDaily = L.id >= DAILY_BASE;
+    const newBest = this.run || isDaily ? false : SaveManager.record(L.id, true, stars, score);
+    let daily: ResultData['daily'];
+    if (isDaily) { const best = SaveManager.recordDaily(L.id - DAILY_BASE, launchesUsed, this.damage.total); daily = { date: L.id - DAILY_BASE, launches: launchesUsed, streak: SaveManager.data.daily.streak, best }; Analytics.track('daily_clear', { launches: launchesUsed }); }
     Analytics.track('level_clear', { level: L.id, stars, damage: this.damage.total, launches_used: launchesUsed });
     if (stars === 3) platform.happyTime();
     let totalBest = 0;
@@ -470,18 +508,20 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(250, () => this.confetti.explode(60, L.stage.x + L.stage.w / 2, L.stage.y - 150));
     this.popText(t.x, t.y - 90, 'PAHUNCH GAYE!', '#f4c430', 46);
     AudioManager.play('yay');
+    buzz([40, 60, 80]);
     this.decor.cheer();
     this.react('win', t.x, t.y);
     const run = this.run ? { ...this.run, damage: this.run.damage + this.damage.total } : null;
     if (run) { SaveManager.recordEndless(run.round, run.damage); Analytics.track('endless_round_clear', { round: run.round }); }
-    const data: ResultData = { levelId: L.id, name: L.name, run, cleared: true, stars, damage: this.damage.total, score, launchesLeft: this.launchesLeft, gift, newBest, badge, target: L.damageTarget, hasGift: !!L.gift };
+    const unlock = !run ? OUTFITS.find((o) => o.level === L.id)?.name : undefined;
+    const data: ResultData = { levelId: L.id, name: L.name, unlock, daily, run, cleared: true, stars, damage: this.damage.total, score, launchesLeft: this.launchesLeft, gift, newBest, badge, target: L.damageTarget, hasGift: !!L.gift };
     this.time.delayedCall(this.testSteps ? 10 : 1300, () => this.startReplay(() => this.showResult(data)));
   }
 
   private levelFail() {
     this.state = 'ending';
     const L = this.level;
-    if (!this.run) SaveManager.record(L.id, false, 0, 0);
+    if (!this.run && L.id < DAILY_BASE) SaveManager.record(L.id, false, 0, 0);
     Analytics.track('level_fail', { level: L.id, damage: this.damage.total });
     AudioManager.play('sad');
     AudioManager.play('fallscream');
@@ -490,7 +530,8 @@ export class GameScene extends Phaser.Scene {
     const run = this.run ? { ...this.run, damage: this.run.damage + this.damage.total } : null;
     let recordRun = false;
     if (run) { recordRun = SaveManager.recordEndless(run.round - 1, run.damage); Analytics.track('endless_over', { round: run.round, damage: run.damage }); }
-    const data: ResultData = { levelId: L.id, name: L.name, run, recordRun, cleared: false, stars: 0, damage: this.damage.total, score: 0, launchesLeft: 0, gift: !!this.world.gift?.collected, newBest: false, badge: null, target: L.damageTarget, hasGift: !!L.gift };
+    const daily = L.id >= DAILY_BASE ? { date: L.id - DAILY_BASE, launches: 3, streak: SaveManager.data.daily.streak, best: false } : undefined;
+    const data: ResultData = { levelId: L.id, name: L.name, daily, run, recordRun, cleared: false, stars: 0, damage: this.damage.total, score: 0, launchesLeft: 0, gift: !!this.world.gift?.collected, newBest: false, badge: null, target: L.damageTarget, hasGift: !!L.gift };
     this.time.delayedCall(this.testSteps ? 10 : 1400, () => this.startReplay(() => this.showResult(data)));
   }
 
@@ -510,7 +551,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private pauseGame() {
-    if (!this.scene.isActive('Game') || this.state === 'done' || this.state === 'ending' || this.state === 'replay') return;
+    if (!this.scene.isActive('Game') || this.state === 'done' || this.state === 'ending' || this.state === 'replay' || this.state === 'offer') return;
     this.aim.active = false; this.traj.clear(); bus.emit('hud:aim', null);
     platform.gameplayStop();
     this.scene.pause();
@@ -670,7 +711,7 @@ export class GameScene extends Phaser.Scene {
   private syncVisuals() {
     this.ragdoll?.sync();
     const r = this.ragdoll;
-    if (r) {
+    if (r && !SaveManager.data.lowfx) {
       const t = r.torso.position, S = this.level.stage;
       const surface = t.x > S.x && t.x < S.x + S.w && t.y < S.y + 10 ? S.y : GROUND_Y;
       const k = Phaser.Math.Clamp(1 - (surface - t.y) / 700, 0.2, 1);
@@ -739,6 +780,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private bigImpact(x: number, y: number, rel: number, onProp: boolean) {
+    if (rel > 12) buzz(25);
     if (this.whistled) AudioManager.stopChannel('whistle');
     const r = this.ragdoll!;
     this.cameras.main.shake(120, Math.min(0.012, 0.003 + rel * 0.0004));
@@ -849,6 +891,7 @@ export class GameScene extends Phaser.Scene {
     for (const k in r.images) r.images[k].setTint(0x8a6a5a);
     this.time.delayedCall(1200, () => { if (this.ragdoll === r) for (const k in r.images) r.images[k].clearTint(); });
     AudioManager.play('sizzle');
+    buzz([30, 40, 30]);
     this.smoke.explode(10, h.x, h.y);
     this.sparks.explode(14, h.x, h.y);
     this.tweens.add({ targets: h.img, scaleX: 1.08, scaleY: 0.92, duration: 80, yoyo: true });
@@ -866,6 +909,7 @@ export class GameScene extends Phaser.Scene {
     c.img.setVisible(false);
     c.spark.stop();
     AudioManager.play('blast');
+    buzz(60);
     AudioManager.play('aah');
     this.sparks.explode(36, c.x, c.y - 20);
     this.confetti.explode(16, c.x, c.y - 20);

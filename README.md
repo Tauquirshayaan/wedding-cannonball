@@ -137,3 +137,18 @@ Levels 1–10 are hand-made (`src/levels/level01..10.json`). Levels 11–1002 ar
 - Difficulty rises over the first ~300 levels: the stage moves further away, sits higher on a riser more often, and the levels get more obstacles and hazards.
 - Every generated level is checked to have clean winning shots before it can be played. All 992 currently have at least 4.
 - Endless Baraat (unlocked after level 3) uses the same generator with a random seed per run.
+
+## Game modes and progression
+
+| Mode | What it is |
+| --- | --- |
+| Campaign (1–1002) | 10 hand-made levels, then 992 generated levels. Difficulty keeps rising all the way to 1002. |
+| Boss levels | Every 50th level: a raised, narrow stage, more obstacles, a gold banner and a higher damage target. |
+| Daily Challenge | One generated level per date, identical for everyone. It tracks a 🔥 day streak and has an emoji result to share. Unlocks after level 3. |
+| Endless Baraat | Random rounds that get harder. One failed round ends the run, and the best run is saved. Unlocks after level 3. |
+
+**Wardrobe:** 10 kurta, sherwani and Nehru-jacket looks, 4 suits unlocked by stars (6, 12, 18 and 24), and 5 milestone outfits unlocked by clearing levels 50, 100, 250, 500 and 1002.
+
+**Monetisation (Poki and CrazyGames):** a mid-game ad between levels, plus an opt-in rewarded ad. When the last launch misses, the game offers one more launch for watching an ad, once per attempt. Neither appears on itch.io or YouTube.
+
+**Settings:** sound and music volume, voice, vibration (phones), *Reduce effects* (turns off the crowd, light strings and shadows on slow phones), and reset progress, which keeps your settings and outfit.

@@ -22,6 +22,10 @@ export interface Platform {
   gameplayStop(): void;
   /** Mid-game ad between levels. Resolves when the game may continue. */
   commercialBreak(): Promise<void>;
+  /** True when the portal can show an opt-in rewarded ad. */
+  hasRewarded(): boolean;
+  /** Opt-in rewarded ad. Resolves true only if the player watched it to the end. */
+  rewardedBreak(): Promise<boolean>;
   happyTime(): void;
   sendScore(score: number): void;
   load(): Promise<string | null>;
@@ -65,6 +69,8 @@ class WebPlatform implements Platform {
   gameplayStart() { this.inGameplay = true; }
   gameplayStop() { this.inGameplay = false; }
   async commercialBreak() {}
+  hasRewarded() { return false; }
+  async rewardedBreak() { return false; }
   happyTime() {}
   sendScore(_score: number) {}
   async load() { return lsGet(); }
@@ -98,6 +104,15 @@ class PokiPlatform extends WebPlatform {
     try { await window.PokiSDK.commercialBreak(() => pauseHooks.forEach((h) => h())); } catch { /* ignore */ }
     resumeHooks.forEach((h) => h());
   }
+  hasRewarded() { return this.ok && !!window.PokiSDK?.rewardedBreak; }
+  async rewardedBreak() {
+    if (!this.hasRewarded()) return false;
+    this.gameplayStop();
+    let ok = false;
+    try { ok = !!(await window.PokiSDK.rewardedBreak(() => pauseHooks.forEach((h) => h()))); } catch { ok = false; }
+    resumeHooks.forEach((h) => h());
+    return ok;
+  }
 }
 
 class CrazyGamesPlatform extends WebPlatform {
@@ -129,6 +144,21 @@ class CrazyGamesPlatform extends WebPlatform {
           adError: done,
         });
       } catch { done(); }
+    });
+  }
+  hasRewarded() { return !!this.sdk?.ad?.requestAd; }
+  rewardedBreak(): Promise<boolean> {
+    if (!this.sdk) return Promise.resolve(false);
+    this.gameplayStop();
+    return new Promise((resolve) => {
+      const done = (ok: boolean) => { resumeHooks.forEach((h) => h()); resolve(ok); };
+      try {
+        this.sdk.ad.requestAd('rewarded', {
+          adStarted: () => pauseHooks.forEach((h) => h()),
+          adFinished: () => done(true),
+          adError: () => done(false),
+        });
+      } catch { done(false); }
     });
   }
   async load() {

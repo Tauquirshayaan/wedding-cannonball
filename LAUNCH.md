@@ -13,7 +13,7 @@ npm run build:all       # writes release/human-cannonball-<portal>.zip
 2. Upload `release/human-cannonball-web.zip` and tick **This file will be played in the browser**.
 3. Set the viewport to **1280 × 720**, turn on **Mobile friendly** with landscape orientation, and turn on **Fullscreen button**.
 4. Tags: `physics`, `comedy`, `ragdoll`, `india`, `wedding`, `casual`.
-5. For screenshots and a cover, run `node scripts/screenshots.cjs http://localhost:4173` against `npm run preview`. The images are saved to `marketing/`.
+5. Screenshots and a 630×500 cover are ready in `marketing/`. To regenerate them, run `npm run serve` and then `node scripts/screenshots.cjs http://localhost:8080`.
 
 ## 3. CrazyGames (week 2)
 
@@ -37,13 +37,15 @@ npm run build:all       # writes release/human-cannonball-<portal>.zip
 
 ## Automated audit
 
-`npm run build:all && npm run test:e2e` runs 82 checks in headless Chromium:
+`npm run build:all && npm run test:e2e` runs 94 checks in headless Chromium:
 - menus, aiming, flail, cancel, pause and resume, restart, and pause on tab switch
 - a winning shot on all 10 levels, plus saving and reload
 - recovery from a tampered save
 - settings
 - the Poki, CrazyGames and YouTube SDK calls, using mock SDKs
 - generated campaign levels 11, 250, 500 and 1002 won with real physics, identical layouts on every load, and level-select paging
+- the Boss level 50 (and its outfit unlock), plus the Daily Challenge (same level all day, streak saved)
+- the rewarded "+1 launch" on Poki and CrazyGames
 - Endless Baraat: 6 generated rounds won with real physics, run over, new run, best run saved
 - the Wardrobe: suits unlock with stars, and Lucky wears the chosen outfit in game
 - the single-file build

@@ -83,25 +83,33 @@ export function winningShots(L: LevelData) {
   return wins;
 }
 
-function build(round: number, r: () => number): LevelData {
-  const d = Math.min(1, (round - 1) / 15); // difficulty 0..1 over the first 16 rounds
+const LOW_POOL = ['sofa', 'laddooPyramid', 'cracker', 'photographer', 'relative', 'kadhai'];
+
+function build(round: number, r: () => number, opts: { boss?: boolean; safe?: boolean } = {}): LevelData {
+  const d = Math.min(1, (round - 1) / 15); // main difficulty ramp over the first 16 rounds
+  const e = Math.min(1, Math.max(0, (round - 16) / 25)); // late ramp: keeps getting harder up to round 41 (level 1002)
   const pick = <T,>(a: T[]) => a[Math.floor(r() * a.length)];
-  const stageW = Math.round(340 - d * 90);
-  const stageX = Math.round(1150 + d * 950 + r() * 250);
-  const raised = r() < 0.2 + d * 0.45;
-  const stageY = raised ? Math.round(600 - 80 - r() * (60 + 200 * d)) : 600;
+  const boss = !!opts.boss;
+  const stageW = Math.max(200, Math.round(340 - d * 90 - e * 40 - (boss ? 20 : 0)));
+  const stageX = Math.min(2350, Math.round(1150 + d * 950 + e * 150 + r() * 250));
+  const raised = r() < 0.2 + d * 0.45 + e * 0.2 || boss;
+  const stageY = raised ? Math.max(260, Math.round(600 - 80 - r() * (60 + 200 * d + 80 * e))) : 600;
   const objects: ObjDef[] = [];
   const pool = ['sofa', 'laddooPyramid', 'cracker', 'photographer', 'dhol'];
   if (round >= 2) pool.push('relative', 'kadhai');
   if (round >= 3) pool.push('canopy', 'tandoor', 'cake');
   if (round >= 4) pool.push('vat', 'rocket');
   if (round >= 6) pool.push('fan', 'pillar');
-  const count = 3 + Math.floor(d * 5) + (r() < 0.5 ? 1 : 0);
-  let x = 420 + r() * 120;
+  const pool2 = opts.safe ? LOW_POOL.filter((t) => pool.includes(t)) : pool;
+  const count = 3 + Math.floor(d * 5) + Math.floor(e * 2) + (boss ? 2 : 0) + (r() < 0.5 ? 1 : 0);
+  // tighter spacing when the stage is close, so every level has at least 3 things to smash
+  const room = stageX - 220 - 420;
+  const gapScale = room < 900 ? 0.62 : room < 1200 ? 0.8 : 1;
+  let x = 400 + r() * 100 * gapScale;
   for (let i = 0; i < count && x < stageX - 220; i++) {
-    let t = pick(pool);
-    if (objects.length && t === objects[objects.length - 1].type) t = pick(pool); // avoid repeats
-    if (objects.length && t === objects[objects.length - 1].type) t = pool[(pool.indexOf(t) + 1) % pool.length];
+    let t = pick(pool2);
+    if (objects.length && t === objects[objects.length - 1].type) t = pick(pool2); // avoid repeats
+    if (objects.length && t === objects[objects.length - 1].type) t = pool2[(pool2.indexOf(t) + 1) % pool2.length];
     const o: ObjDef = { type: t, x: Math.round(x) };
     let span = 180;
     switch (t) {
@@ -118,9 +126,9 @@ function build(round: number, r: () => number): LevelData {
       case 'kadhai': span = 200; break;
     }
     objects.push(o);
-    x += span + r() * 120;
+    x += (span + r() * 120) * gapScale;
   }
-  const gift = r() < 0.6 ? { x: Math.round(500 + r() * Math.max(200, stageX - 800)), y: Math.round(170 + r() * 260) } : null;
+  const gift = r() < 0.6 || boss ? { x: Math.round(500 + r() * Math.max(200, stageX - 800)), y: Math.round(170 - e * 40 + r() * 260) } : null;
   const theme = ENDLESS_BASE + round;
   return {
     id: theme,
@@ -136,23 +144,46 @@ function build(round: number, r: () => number): LevelData {
 }
 
 /** Campaign levels 11+: the same generator with a fixed seed per level, so every player gets the same layout. */
-export function campaignLevel(id: number): LevelData {
-  const round = 2 + Math.floor((id - 11) / 25); // difficulty climbs slowly across ~1000 levels
-  const L = generateRound(round, id * 7777 + 13);
-  return { ...L, id, name: campaignName(id), tip: `Level ${id}`, damageTarget: Math.min(8000, 900 + round * 220) };
+/** Daily Challenge ids: DAILY_BASE + yyyymmdd. Everyone gets the same level on the same date. */
+export const DAILY_BASE = 100_000_000;
+export const todayKey = () => { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); };
+export function dailyLevel(date: number): LevelData {
+  const round = 6 + (date % 7); // medium-hard, varies through the week
+  const L = generateRound(round, date * 31 + 7);
+  const y = Math.floor(date / 10000), m = Math.floor(date / 100) % 100, d = date % 100;
+  const label = new Date(y, m - 1, d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  return { ...L, id: DAILY_BASE + date, name: `Daily · ${label}`, tip: 'Daily Challenge: same level for everyone today', damageTarget: 900 + round * 220 };
 }
 
-export function campaignName(id: number) { return NAMES[(id * 7) % NAMES.length]; }
+export const isBossLevel = (id: number) => id >= 50 && id % 50 === 0;
+
+export function campaignLevel(id: number): LevelData {
+  const boss = isBossLevel(id);
+  const round = 2 + Math.floor((id - 11) / 25) + (boss ? 3 : 0); // difficulty climbs across all ~1000 levels
+  const L = generateRound(round, id * 7777 + 13, boss);
+  const target = Math.min(9000, 900 + round * 220);
+  return { ...L, id, name: campaignName(id), tip: boss ? `BOSS LEVEL ${id} · Mega Baraat!` : `Level ${id}`, damageTarget: boss ? Math.round(target * 1.4) : target };
+}
+
+const BOSS_NAMES = ['Mega Baraat', 'Grand Sangeet', 'Royal Reception', 'Mahabaraat', 'The Big Fat Finale'];
+export function campaignName(id: number) {
+  return isBossLevel(id) ? `BOSS: ${BOSS_NAMES[(id / 50) % BOSS_NAMES.length]}` : NAMES[(id * 7) % NAMES.length];
+}
 
 /** Builds round N of a run. Retries with new layouts until at least a few clean winning shots exist. */
-export function generateRound(round: number, runSeed: number): LevelData {
+export function generateRound(round: number, runSeed: number, boss = false): LevelData {
+  const seed = (a: number) => rng(runSeed * 7919 + round * 104729 + a * 31337);
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const L = build(round, seed(attempt), { boss });
+    if (winningShots(L) >= 4) return L;
+  }
+  // still too hard: rebuild with low obstacles only (full of things to smash, never blocking)
   let best: LevelData | null = null;
-  for (let attempt = 0; attempt < 40; attempt++) {
-    const L = build(round, rng(runSeed * 7919 + round * 104729 + attempt * 31337));
+  for (let attempt = 60; attempt < 120; attempt++) {
+    const L = build(round, seed(attempt), { boss, safe: true });
     if (winningShots(L) >= 4) return L;
     best = L;
   }
-  // last resort: drop the obstacles closest to the stage until it is winnable
   const L = best!;
   while (L.objects.length && winningShots(L) < 4) L.objects.pop();
   return L;
