@@ -41,6 +41,7 @@ export class GameScene extends Phaser.Scene {
   private stillMs = 0;
   private stageStillMs = 0;
   private flailUsed = false;
+  private whistled = false;
   private stuck = false;
   private aim = { active: false, sx: 0, sy: 0, angle: 45, power: 0, valid: false };
   private lastAim = { angle: 40, power: 0.75 };
@@ -342,7 +343,7 @@ export class GameScene extends Phaser.Scene {
     this.damage.newLaunch();
     this.recorder.clear();
     this.flightMs = 0; this.stillMs = 0; this.stageStillMs = 0;
-    this.flailUsed = false; this.stuck = false;
+    this.flailUsed = false; this.stuck = false; this.whistled = false;
     if (this.ragdoll) { this.ragdoll.destroy(); this.ragdoll = null; }
     for (const r of this.world.rockets) {
       r.flyTween?.stop();
@@ -401,6 +402,7 @@ export class GameScene extends Phaser.Scene {
     const S = this.level.stage;
     const missEvent = this.stuck ? 'missVat' : t.x < S.x - 140 ? 'missShort' : t.x > S.x + S.w ? 'missLong' : 'missNear';
     this.time.delayedCall(this.stuck ? 900 : 200, () => this.react(missEvent, t.x, t.y));
+    if (this.launchesLeft > 0) this.time.delayedCall(350, () => AudioManager.play('laugh'));
     this.ragdoll.setFace('dizzy');
     if (this.launchesLeft > 0) {
       const msg = this.stuck ? 'Chashni mein phas gaye!' : this.launchesLeft === 1 ? 'Missed! Last launch!' : 'Missed! Try again';
@@ -609,6 +611,8 @@ export class GameScene extends Phaser.Scene {
         if (v.rect.contains(t.x, t.y)) { this.stickInVat(); break; }
       }
     }
+    // cartoon falling whistle when he drops from high up
+    if (!this.whistled && !this.stuck && r.torso.velocity.y > 7 && t.y < GROUND_Y - 300) { this.whistled = true; AudioManager.play('fallwhistle'); }
     // whoosh on fast flight
     if (r.torso.speed > 20 && this.whooshCooldown <= 0) { AudioManager.play('whoosh', r.torso.speed / 25); this.whooshCooldown = 700; }
     // record replay frame
@@ -686,6 +690,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private bigImpact(x: number, y: number, rel: number, onProp: boolean) {
+    if (this.whistled) AudioManager.stopChannel('whistle');
     const r = this.ragdoll!;
     this.cameras.main.shake(120, Math.min(0.012, 0.003 + rel * 0.0004));
     this.petals.explode(Math.min(14, 4 + Math.round(rel / 2)), x, y);
@@ -809,6 +814,7 @@ export class GameScene extends Phaser.Scene {
     c.img.setVisible(false);
     c.spark.stop();
     AudioManager.play('blast');
+    AudioManager.play('aah');
     this.sparks.explode(36, c.x, c.y - 20);
     this.confetti.explode(16, c.x, c.y - 20);
     this.smoke.explode(10, c.x, c.y);

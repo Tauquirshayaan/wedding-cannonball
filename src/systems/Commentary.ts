@@ -101,6 +101,7 @@ class CommentaryImpl {
   }
 
   private async loadPack() {
+    if (location.protocol === 'file:') return; // opened as a local file: no voice pack folder to read
     try {
       const r = await fetch('voice/manifest.json', { cache: 'no-cache' });
       if (!r.ok) return;

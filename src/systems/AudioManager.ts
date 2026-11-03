@@ -1,10 +1,16 @@
 // All sound is synthesised live with Web Audio: original by construction, zero bytes to download.
 
+// Recorded cartoon reaction clips (src/assets/sfx, royalty-free, trimmed and loudness-normalised).
+const CLIP_URLS = import.meta.glob('../assets/sfx/*.mp3', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+type Clip = 'scream' | 'ow' | 'awww' | 'laugh1' | 'laugh2' | 'laugh3' | 'fallwhistle' | 'fallwhistle2';
+type Channel = 'voice' | 'crowd' | 'whistle';
+
 export type Sfx =
   | 'boom' | 'whoosh' | 'dhol' | 'crash' | 'laddoo' | 'click' | 'ohh' | 'whistle'
   | 'shehnai' | 'sad' | 'pop' | 'star' | 'splat' | 'combo' | 'gift' | 'bounce' | 'flail'
   | 'ouch' | 'aah' | 'haaye' | 'arre' | 'yay' | 'oof' | 'sizzle' | 'blast'
-  | 'slide' | 'bonk' | 'boing' | 'fallscream' | 'zip';
+  | 'slide' | 'bonk' | 'boing' | 'fallscream' | 'zip'
+  | 'laugh' | 'fallwhistle';
 
 class AudioManagerImpl {
   ctx: AudioContext | null = null;
@@ -49,6 +55,7 @@ class AudioManagerImpl {
         for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
         this.applyVolumes();
         if (this.musicOn) this.startScheduler();
+        void this.loadClips();
       }
       if (this.ctx.state === 'suspended' && !this.hidden) void this.ctx.resume();
     } catch { /* audio unavailable: play silently */ }
@@ -151,8 +158,55 @@ class AudioManagerImpl {
   }
 
   // ---------- sound effects ----------
+  private clips = new Map<Clip, AudioBuffer>();
+  private channels: Partial<Record<Channel, AudioBufferSourceNode>> = {};
+
+  private async loadClips() {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    await Promise.all(Object.entries(CLIP_URLS).map(async ([path, url]) => {
+      const name = path.split('/').pop()!.replace('.mp3', '') as Clip;
+      try {
+        const buf = await ctx.decodeAudioData(await (await fetch(url)).arrayBuffer());
+        this.clips.set(name, buf);
+      } catch { /* clip unavailable: synth fallback is used */ }
+    }));
+  }
+
+  /** Plays a recorded clip on a channel (a new clip on the same channel replaces the old one). */
+  private clip(name: Clip, ch: Channel, rate = 1, vol = 1) {
+    const buf = this.clips.get(name);
+    if (!buf || !this.ctx) return false;
+    try { this.channels[ch]?.stop(); } catch { /* already ended */ }
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf;
+    src.playbackRate.value = rate * (0.96 + Math.random() * 0.08);
+    const g = this.ctx.createGain(); g.gain.value = vol;
+    src.connect(g); g.connect(this.sfxGain);
+    src.start();
+    this.channels[ch] = src;
+    src.onended = () => { if (this.channels[ch] === src) delete this.channels[ch]; };
+    return true;
+  }
+
+  stopChannel(ch: Channel) {
+    try { this.channels[ch]?.stop(); } catch { /* ignore */ }
+    delete this.channels[ch];
+  }
+
   play(name: Sfx, intensity = 1) {
     if (!this.ctx || this.ctx.state !== 'running') return;
+    // recorded reactions first; the synthesised versions below are the fallback
+    switch (name) {
+      case 'aah': if (this.clip('scream', 'voice', 1, 0.9)) return; break;
+      case 'ouch': if (this.clip('ow', 'voice', 1, 1)) return; break;
+      case 'oof': if (this.clip('ow', 'voice', 0.85, 0.7)) return; break;
+      case 'arre': if (this.clip('ow', 'voice', 0.78, 1)) return; break;
+      case 'fallscream': if (this.clip('awww', 'voice', 1, 1)) return; break;
+      case 'laugh': this.clip((['laugh1', 'laugh2', 'laugh3'] as Clip[])[Math.floor(Math.random() * 3)], 'crowd', 1, 0.75); return;
+      case 'fallwhistle': this.clip(Math.random() < 0.5 ? 'fallwhistle2' : 'fallwhistle', 'whistle', 1, 0.6); return;
+      default: break;
+    }
     const now = this.ctx.currentTime;
     // simple rate limit so pile-ups do not get deafening
     const minGap = name === 'laddoo' || name === 'crash' ? 0.05 : 0.03;

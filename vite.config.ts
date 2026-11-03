@@ -17,7 +17,7 @@ const CSP = [
   "img-src 'self' data: blob:",
   "media-src 'self' data: blob:",
   "font-src 'self' data:",
-  "connect-src 'self'",
+  "connect-src 'self' data:",
   "object-src 'none'",
   "base-uri 'none'",
   "form-action 'none'",
@@ -39,7 +39,8 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: `dist/${mode === 'production' ? 'web' : mode}`,
       emptyOutDir: true,
-      assetsInlineLimit: 0,
+      // single-file builds must embed the sound clips; normal builds keep them as cacheable files
+      assetsInlineLimit: single ? 100_000_000 : 0,
       chunkSizeWarningLimit: 2000,
       target: 'es2019',
     },
