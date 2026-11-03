@@ -37,6 +37,18 @@
    "type": "vat",
    "x": 1430,
    "w": 300
+  },
+  {
+   "type": "cracker",
+   "x": 740
+  },
+  {
+   "type": "cracker",
+   "x": 940
+  },
+  {
+   "type": "tandoor",
+   "x": 1200
   }
  ]
 }

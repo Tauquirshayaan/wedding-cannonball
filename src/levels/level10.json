@@ -64,6 +64,18 @@
    "w": 140,
    "h": 140,
    "style": "riser"
+  },
+  {
+   "type": "tandoor",
+   "x": 820
+  },
+  {
+   "type": "cracker",
+   "x": 1900
+  },
+  {
+   "type": "cracker",
+   "x": 2110
   }
  ]
 }

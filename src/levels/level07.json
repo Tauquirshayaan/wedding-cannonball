@@ -49,6 +49,14 @@
    "type": "photographer",
    "x": 700,
    "walkRange": 160
+  },
+  {
+   "type": "cracker",
+   "x": 820
+  },
+  {
+   "type": "tandoor",
+   "x": 300
   }
  ]
 }

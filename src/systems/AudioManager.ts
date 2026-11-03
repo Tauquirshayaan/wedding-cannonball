@@ -3,7 +3,7 @@
 export type Sfx =
   | 'boom' | 'whoosh' | 'dhol' | 'crash' | 'laddoo' | 'click' | 'ohh' | 'whistle'
   | 'shehnai' | 'sad' | 'pop' | 'star' | 'splat' | 'combo' | 'gift' | 'bounce' | 'flail'
-  | 'ouch' | 'aah' | 'haaye' | 'arre' | 'yay' | 'oof';
+  | 'ouch' | 'aah' | 'haaye' | 'arre' | 'yay' | 'oof' | 'sizzle' | 'blast';
 
 class AudioManagerImpl {
   ctx: AudioContext | null = null;
@@ -237,6 +237,15 @@ class AudioManagerImpl {
       case 'haaye': this.vocal(t, 520, 380, 0.5, [850, 1400], [700, 1900], 0.4, out); break;
       case 'arre': this.vocal(t, 150, 120, 0.42, [650, 1100], [500, 1700], 0.55, out); break;
       case 'yay': this.vocal(t, 330, 520, 0.4, [700, 1200], [500, 2000], 0.45, out); break;
+      case 'sizzle':
+        this.noiseHit(t, 0.7, 0.35, 'highpass', 3000, 6000, out, 0.8);
+        this.noiseHit(t + 0.05, 0.4, 0.2, 'bandpass', 5000, 2500, out, 2);
+        break;
+      case 'blast':
+        this.noiseHit(t, 0.5, 1, 'lowpass', 4000, 150, out);
+        this.tone('sine', 110, 35, t, 0.4, 0.9, out);
+        for (let i = 0; i < 6; i++) this.noiseHit(t + 0.08 + i * 0.05, 0.04, 0.3, 'highpass', 5000, 4000, out);
+        break;
       case 'shehnai': {
         const n = (s: number) => 523.25 * Math.pow(2, s / 12);
         // celebratory reed fanfare
@@ -299,6 +308,8 @@ class AudioManagerImpl {
   }
 
   private playStep(s: number, t: number, sd: number) {
+    // no point creating audio nodes nobody can hear
+    if (this.musicVol <= 0.001 || this.muted || this.externallyMuted) return;
     const out = this.musicGain;
     const b = s % 16;
     // dhol: bass "dhum" and treble "ta"

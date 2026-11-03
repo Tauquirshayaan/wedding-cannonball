@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GAME_W, GAME_H, GROUND_Y, PHYS, STEP_MS, FONT } from '../config';
 import { OBJ } from '../data/objectTypes';
 import { LEVELS } from '../levels';
-import { themeFor, outfitFor, themeTextures } from '../art/Themes';
+import { themeFor, outfitFor, themeTextures, releaseThemeTextures } from '../art/Themes';
 import type { LevelData } from '../levels/types';
 import { buildLevel, LevelWorld, Prop, Bouncer } from '../objects/LevelBuilder';
 import { Ragdoll } from '../objects/Ragdoll';
@@ -123,7 +123,7 @@ export class GameScene extends Phaser.Scene {
 
     // sky must cover the view even fully zoomed out
     const minZoom = Math.min(1, GAME_W / (L.stage.x + L.stage.w + 90)) * 0.85;
-    sky.setScale(1.15 / minZoom);
+    sky.setScale(2.3 / minZoom);
     this.world = buildLevel(this, L);
 
     // --- cannon ---
@@ -170,6 +170,10 @@ export class GameScene extends Phaser.Scene {
       this.hudHandlers = [];
       this.tweens.killAll();
       Commentary.stop();
+      this.pops = [];
+      // free per-level canvases (venue art and level-sized props) so memory stays flat across many levels
+      releaseThemeTextures(this, theme);
+      for (const k of this.textures.getTextureKeys()) if (/_\d+x\d+$/.test(k)) this.textures.remove(k);
     });
     this.game.events.on('hidden', this.onHidden, this);
     this.events.once('shutdown', () => this.game.events.off('hidden', this.onHidden, this));
@@ -590,6 +594,14 @@ export class GameScene extends Phaser.Scene {
           if (Phaser.Math.Distance.Between(b.position.x, b.position.y, g.x, g.y) < OBJ.gift.radius + 14) { this.collectGift(); break; }
         }
       }
+      // hot kadhai oil / tandoor fire: pops Lucky up with a burn (once per launch each)
+      for (const h of this.world.hot) {
+        if (h.lastLaunch !== this.launchIndex && (h.rect.contains(t.x, t.y) || h.rect.contains(r.bodies.legFront.position.x, r.bodies.legFront.position.y))) this.burn(h);
+      }
+      // firecrackers explode when touched
+      for (const c of this.world.crackers) {
+        if (c.live && Phaser.Math.Distance.Between(t.x, t.y, c.x, c.y) < 52) this.explodeCracker(c, 0);
+      }
       // chashni vat
       for (const v of this.world.vats) {
         if (v.rect.contains(t.x, t.y)) { this.stickInVat(); break; }
@@ -768,6 +780,58 @@ export class GameScene extends Phaser.Scene {
     this.recorder.mark(4);
   }
 
+  private burn(h: { kind: 'kadhai' | 'fire'; x: number; y: number; lastLaunch: number; img: Phaser.GameObjects.Image }) {
+    const r = this.ragdoll!;
+    h.lastLaunch = this.launchIndex;
+    const v = r.averageVelocity();
+    r.setVelocity(Phaser.Math.Clamp(v.x * 0.7, -10, 10) + 2, -15);
+    r.flail();
+    r.setFace('scared');
+    for (const k in r.images) r.images[k].setTint(0x8a6a5a);
+    this.time.delayedCall(1200, () => { if (this.ragdoll === r) for (const k in r.images) r.images[k].clearTint(); });
+    AudioManager.play('sizzle');
+    this.smoke.explode(10, h.x, h.y);
+    this.sparks.explode(14, h.x, h.y);
+    this.tweens.add({ targets: h.img, scaleX: 1.08, scaleY: 0.92, duration: 80, yoyo: true });
+    const res = this.damage.hit(-200, this.physTime);
+    bus.emit('hud:damage', this.damage.total, res.value);
+    this.popText(h.x, h.y - 50, h.kind === 'kadhai' ? 'Garam tel! -₹200' : 'Aag! -₹200', '#ff9a3c', 28);
+    this.react(h.kind === 'kadhai' ? 'kadhai' : 'fire', r.torso.position.x, r.torso.position.y, 'ouch', true);
+    this.recorder.mark(4);
+  }
+
+  private explodeCracker(c: { x: number; y: number; img: Phaser.GameObjects.Image; spark: Phaser.GameObjects.Particles.ParticleEmitter; live: boolean }, depth: number) {
+    if (!c.live) return;
+    c.live = false;
+    c.img.setVisible(false);
+    c.spark.stop();
+    AudioManager.play('blast');
+    this.sparks.explode(36, c.x, c.y - 20);
+    this.confetti.explode(16, c.x, c.y - 20);
+    this.smoke.explode(10, c.x, c.y);
+    this.cameras.main.shake(220, 0.014);
+    const r = this.ragdoll;
+    if (r && this.state === 'flight' && !this.stuck) {
+      const t = r.torso.position;
+      const d = Phaser.Math.Distance.Between(t.x, t.y, c.x, c.y);
+      if (d < 150) {
+        const dx = Math.sign(t.x - c.x) || 1;
+        r.setVelocity(dx * 7 + r.torso.velocity.x * 0.4, -17);
+        r.flail();
+        if (depth === 0) this.react('cracker', t.x, t.y, 'aah', true);
+      }
+      const res = this.damage.hit(600, this.physTime);
+      bus.emit('hud:damage', this.damage.total, res.value);
+      if (res.chain >= 2) bus.emit('hud:combo', res.mult, res.mult >= PHYS.comboMax);
+    }
+    this.popText(c.x, c.y - 60, 'BOOM!', '#ff4d6d', 34);
+    this.recorder.mark(6);
+    // chain reaction
+    for (const o of this.world.crackers) {
+      if (o.live && Phaser.Math.Distance.Between(o.x, o.y, c.x, c.y) < 190) this.time.delayedCall(160, () => this.explodeCracker(o, depth + 1));
+    }
+  }
+
   private stickInVat() {
     const r = this.ragdoll!;
     this.stuck = true;
@@ -810,8 +874,18 @@ export class GameScene extends Phaser.Scene {
     g.fillTriangle(-7, h / 2 - 2, 7, h / 2 - 2, -2, h / 2 + 12);
     const s = Math.min(1.8, 1 / this.cam.zoom);
     const c = this.add.container(x, y - 60 * s, [g, label]).setDepth(130).setScale(0.3 * s);
+    this.track(c);
     this.tweens.add({ targets: c, scale: s, duration: 180, ease: 'Back.out' });
     this.tweens.add({ targets: c, y: c.y - 30 * s, alpha: 0, delay: 1300, duration: 400, onComplete: () => c.destroy() });
+  }
+
+  private pops: Phaser.GameObjects.GameObject[] = [];
+
+  /** Every text object owns a canvas + GPU texture, so cap how many float on screen at once. */
+  private track(o: Phaser.GameObjects.GameObject) {
+    this.pops.push(o);
+    o.once('destroy', () => { const i = this.pops.indexOf(o); if (i >= 0) this.pops.splice(i, 1); });
+    while (this.pops.length > 10) this.pops.shift()?.destroy();
   }
 
   private popText(x: number, y: number, text: string, color: string, size: number) {
@@ -820,6 +894,7 @@ export class GameScene extends Phaser.Scene {
     const t = this.add.text(x, y, text, {
       fontFamily: FONT, fontSize: `${size}px`, color, fontStyle: 'bold', stroke: '#2a1420', strokeThickness: Math.max(4, size / 5),
     }).setOrigin(0.5).setDepth(120).setScale(0.4);
+    this.track(t);
     this.tweens.add({ targets: t, scale: 1, duration: 160, ease: 'Back.out' });
     this.tweens.add({ targets: t, y: y - 60, alpha: 0, delay: 500, duration: 600, onComplete: () => t.destroy() });
   }

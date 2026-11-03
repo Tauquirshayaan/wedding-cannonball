@@ -21,7 +21,7 @@ const TIPS = [
 ];
 
 function backdrop(scene: Phaser.Scene, dim = 0) {
-  scene.add.image(GAME_W / 2, GAME_H / 2, 'sky');
+  scene.add.image(GAME_W / 2, GAME_H / 2, 'sky').setScale(2);
   scene.add.tileSprite(0, GROUND_Y - 290, GAME_W, 300, 'bg_far').setOrigin(0);
   scene.add.tileSprite(0, GROUND_Y - 320, GAME_W, 330, 'bg_near').setOrigin(0);
   scene.add.tileSprite(0, GROUND_Y - 11, GAME_W, 120, 'ground').setOrigin(0);

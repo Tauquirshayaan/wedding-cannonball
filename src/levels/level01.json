@@ -23,6 +23,14 @@
    "type": "laddooPyramid",
    "x": 1020,
    "count": 10
+  },
+  {
+   "type": "cracker",
+   "x": 870
+  },
+  {
+   "type": "kadhai",
+   "x": 1170
   }
  ]
 }

@@ -14,6 +14,9 @@ const L = (t: string, hi: string): Line => ({ t, hi });
 export const CUES: Record<string, Cue> = {
   launch: { who: 'lucky', priority: 1, lines: [L('Aaaaaa!', 'आआआआ!'), L('Rukooo!', 'रुकोओ!'), L('Main aa raha hoon!', 'मैं आ रहा हूँ!'), L('Shaadi mein late nahi!', 'शादी में लेट नहीं!')] },
   vat: { who: 'lucky', priority: 5, lines: [L('Aaah! Jal gaya!', 'आह! जल गया!'), L('Garam garam chashni!', 'गरम गरम चाशनी!'), L('Main toh jalebi ban gaya!', 'मैं तो जलेबी बन गया!'), L('Ohh, jal gayi meri kismat!', 'ओह, जल गई मेरी किस्मत!')] },
+  kadhai: { who: 'lucky', priority: 5, lines: [L('Ohh, jal gaya!', 'ओह, जल गया!'), L('Garam tel! Garam tel!', 'गरम तेल! गरम तेल!'), L('Main pakoda ban gaya!', 'मैं पकोड़ा बन गया!'), L('Aaah, mirchi lag gayi!', 'आह, मिर्ची लग गई!')] },
+  fire: { who: 'lucky', priority: 5, lines: [L('Aag! Aag!', 'आग! आग!'), L('Pant jal gayi!', 'पैंट जल गई!'), L('Main toh tandoori ban gaya!', 'मैं तो तंदूरी बन गया!')] },
+  cracker: { who: 'lucky', priority: 5, lines: [L('Dhamaka!', 'धमाका!'), L('Kaan phat gaye!', 'कान फट गए!'), L('Patakha phoot gaya!', 'पटाखा फूट गया!')] },
   dhol: { who: 'lucky', priority: 2, lines: [L('Dhum dhum!', 'धुम धुम!'), L('Upar chala!', 'ऊपर चला!'), L('Dhol baja diya!', 'ढोल बजा दिया!')] },
   sofa: { who: 'lucky', priority: 2, lines: [L('Aaram se!', 'आराम से!'), L('Sofa toh mast hai!', 'सोफ़ा तो मस्त है!')] },
   laddoo: { who: 'lucky', priority: 2, lines: [L('Mere laddoo!', 'मेरे लड्डू!'), L('Laddoo bikhar gaye!', 'लड्डू बिखर गए!'), L('Mithai gir gayi!', 'मिठाई गिर गई!')] },

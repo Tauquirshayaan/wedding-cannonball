@@ -803,7 +803,7 @@ export function generateCoreTextures(scene: Phaser.Scene, onProgress?: (p: numbe
     ['cake_2', 82, 44, cakeTier(2)],
     ['fan_cage', 124, 140, fanCage],
     ['fan_blades', 96, 96, fanBlades],
-    ['sky', 1280, 720, sky],
+    ['sky', 640, 360, sky],
     ['bg_far', 1024, 300, bgFar],
     ['bg_near', 1024, 330, bgNear],
     ['ground', 128, 120, ground],
@@ -820,6 +820,41 @@ export function generateCoreTextures(scene: Phaser.Scene, onProgress?: (p: numbe
     ['px_petal', 14, 10, (c) => ellipse(c, 7, 5, 6, 4, P.marigold, 1.5)],
     ['px_frost', 16, 16, (c) => circle(c, 8, 8, 6, P.cream, 1.5)],
     ['px_dot', 10, 10, (c) => circle(c, 5, 5, 4, '#ffffff', 0)],
+    ['px_flame', 32, 32, soft('rgba(255,170,60,1)')],
+    ['kadhai', 150, 58, (c) => {
+      // hot-oil wok with handles
+      ellipse(c, 75, 14, 66, 10, '#e8a020');
+      c.fillStyle = 'rgba(255,255,255,0.5)';
+      for (const [x, y] of [[50, 12], [80, 15], [105, 11]]) { c.beginPath(); c.arc(x, y, 3, 0, Math.PI * 2); c.fill(); }
+      c.beginPath(); c.moveTo(8, 14); c.quadraticCurveTo(20, 56, 75, 56); c.quadraticCurveTo(130, 56, 142, 14); c.quadraticCurveTo(75, 28, 8, 14); c.closePath();
+      fillStroke(c, '#2f2a36');
+      rr(c, 0, 10, 14, 9, 4); fillStroke(c, '#2f2a36', 2);
+      rr(c, 136, 10, 14, 9, 4); fillStroke(c, '#2f2a36', 2);
+    }],
+    ['stove', 130, 46, (c) => {
+      rr(c, 6, 4, 118, 40, 6); fillStroke(c, '#9a4a2a');
+      c.strokeStyle = 'rgba(0,0,0,0.25)'; c.lineWidth = 2;
+      for (let y = 16; y < 44; y += 12) { c.beginPath(); c.moveTo(8, y); c.lineTo(122, y); c.stroke(); }
+      for (let x = 30; x < 120; x += 32) { c.beginPath(); c.moveTo(x, 4); c.lineTo(x, 16); c.stroke(); }
+      rr(c, 44, 20, 42, 24, 10); fillStroke(c, '#2a1420', 2);
+      ellipse(c, 65, 34, 12, 7, '#ff9a3c', 0);
+    }],
+    ['tandoor', 84, 96, (c) => {
+      c.beginPath(); c.moveTo(14, 18); c.quadraticCurveTo(0, 60, 16, 94); c.lineTo(68, 94); c.quadraticCurveTo(84, 60, 70, 18); c.closePath();
+      fillStroke(c, '#c2703e');
+      c.strokeStyle = '#9a4f28'; c.lineWidth = 3;
+      for (const y of [40, 62, 82]) { c.beginPath(); c.moveTo(10, y); c.quadraticCurveTo(42, y + 6, 74, y); c.stroke(); }
+      ellipse(c, 42, 18, 30, 9, '#3a1a10');
+      ellipse(c, 42, 18, 20, 5, '#ff7b2e', 0);
+    }],
+    ['cracker', 32, 48, (c) => {
+      // anar (flower-pot) firework
+      c.beginPath(); c.moveTo(6, 46); c.lineTo(10, 14); c.lineTo(22, 14); c.lineTo(26, 46); c.closePath();
+      fillStroke(c, '#d72631');
+      c.fillStyle = '#f4c430'; c.fillRect(8, 24, 16, 5); c.fillRect(7, 36, 18, 5);
+      ellipse(c, 16, 14, 7, 3, '#f4c430', 2);
+      c.strokeStyle = '#555'; c.lineWidth = 2; c.beginPath(); c.moveTo(16, 12); c.quadraticCurveTo(22, 4, 18, 1); c.stroke();
+    }],
   ];
   jobs.forEach(([k, w, h, d], i) => {
     make(scene, k, w, h, d);

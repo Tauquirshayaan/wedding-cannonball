@@ -180,7 +180,8 @@ export function onAdResume(cb: () => void) { resumeHooks.push(cb); }
 function pick(): Platform {
   let name = typeof __PLATFORM__ !== 'undefined' ? __PLATFORM__ : 'web';
   try {
-    const q = new URLSearchParams(window.location.search).get('platform');
+    // the ?platform= override is a developer tool only; release builds ignore it
+    const q = import.meta.env.DEV ? new URLSearchParams(window.location.search).get('platform') : null;
     if (q) name = q;
   } catch { /* ignore */ }
   switch (name) {

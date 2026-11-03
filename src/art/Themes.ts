@@ -353,11 +353,16 @@ function ground(t: Theme) {
 /** Generates (once) and returns texture keys for a venue. */
 export function themeTextures(scene: Phaser.Scene, t: Theme) {
   const k = { sky: `sky_${t.id}`, far: `far_${t.id}`, near: `near_${t.id}`, ground: `ground_${t.id}` };
-  make(scene, k.sky, 1280, 720, sky(t));
+  make(scene, k.sky, 640, 360, sky(t)); // half resolution: a gradient upscales cleanly and uses 1/4 of the memory
   make(scene, k.far, 1024, 300, far(t));
   make(scene, k.near, 1024, 330, near(t));
   make(scene, k.ground, 128, 120, ground(t));
   return k;
+}
+
+/** Frees a venue's canvases (CPU + GPU memory) when leaving a level. */
+export function releaseThemeTextures(scene: Phaser.Scene, t: Theme) {
+  for (const k of [`sky_${t.id}`, `far_${t.id}`, `near_${t.id}`, `ground_${t.id}`]) if (scene.textures.exists(k)) scene.textures.remove(k);
 }
 
 export function themeFor(levelId: number) { return THEMES[(levelId - 1) % THEMES.length]; }

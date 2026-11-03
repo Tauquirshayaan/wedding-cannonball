@@ -38,6 +38,18 @@
    "type": "laddooPyramid",
    "x": 1480,
    "count": 6
+  },
+  {
+   "type": "tandoor",
+   "x": 820
+  },
+  {
+   "type": "cracker",
+   "x": 1160
+  },
+  {
+   "type": "cracker",
+   "x": 1215
   }
  ]
 }

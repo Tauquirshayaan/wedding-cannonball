@@ -91,3 +91,31 @@ Object types: `sofa`, `laddooPyramid` (count), `dhol` (y), `photographer` (walkR
 ## Asset sources
 
 All art and audio is generated in code in this repository, so there are no third-party assets. The music is an original band-baja style loop. There are no Bollywood songs and no religious objects.
+
+## Performance, memory and security
+
+**Measured** (headless Chromium in a 4-core cloud container, 3 Nov 2026):
+
+| Check | Result |
+| --- | --- |
+| Physics cost, busiest level mid-crash | 0.07 ms per step, about 0.4% of a 60 fps frame |
+| Memory over 60 level loads | Flat: 114 textures throughout, and the JS heap returns to about 40 MB, so no leak |
+| 1,000 players loading at the same moment (`npm run loadtest`) | 1000/1000 OK, p95 1.6 s, about 380 KB per player |
+| 5,000 players at the same moment | 5000/5000 OK, p95 5.9 s |
+| `npm audit` | 0 vulnerabilities |
+
+**How memory is kept low**
+- Each venue's art and the level-sized textures are freed when you leave a level.
+- The sky is drawn at half resolution, which uses a quarter of the memory.
+- At most 10 floating text pops or speech bubbles exist at once.
+- Resting props sleep in the physics engine.
+- No music nodes are created while the music is muted.
+
+**Security**
+- The game is 100% client-side. There is no backend, no accounts and no data sent anywhere, apart from the portal SDK on portal builds.
+- The web and single-file builds ship a Content-Security-Policy: no external scripts, no network calls, no plugins.
+- Saved data is validated field by field on load, so a tampered save can't inject unexpected values.
+- The `?platform=` override only works in development builds.
+- `scripts/serve.mjs` serves only files that exist in the build, so there is no path traversal. It sends `nosniff`, `no-referrer`, `Permissions-Policy` and `COOP` headers, with immutable caching for hashed assets.
+
+**Self-hosting:** `npm run build && npm run serve`. Behind a CDN (Cloudflare, Netlify, itch.io and the portals all use one), concurrent players are effectively unlimited, because every file is static and cacheable.

@@ -34,6 +34,9 @@ export interface Prop {
 export interface Bouncer { kind: 'dhol' | 'canopy'; body: Body; img: Img; speed: number; lastMs: number; prop: Prop; }
 export interface FanZone { rect: Phaser.Geom.Rectangle; fx: number; fy: number; blades: Img; }
 export interface VatZone { rect: Phaser.Geom.Rectangle; img: Img; }
+/** Hot zones (kadhai oil, tandoor fire): pop Lucky upward with a burn. */
+export interface HotZone { kind: 'kadhai' | 'fire'; rect: Phaser.Geom.Rectangle; x: number; y: number; lastLaunch: number; img: Img; }
+export interface Cracker { x: number; y: number; img: Img; spark: Phaser.GameObjects.Particles.ParticleEmitter; live: boolean; }
 export interface Rocket { x: number; y: number; angle: number; img: Img; glow: Img; armed: boolean; flyTween?: Phaser.Tweens.Tween; }
 export interface Gift { x: number; y: number; img: Img; glow: Img; collected: boolean; }
 
@@ -43,6 +46,8 @@ export interface LevelWorld {
   bouncers: Map<number, Bouncer>;
   fans: FanZone[];
   vats: VatZone[];
+  hot: HotZone[];
+  crackers: Cracker[];
   rockets: Rocket[];
   gift: Gift | null;
   stageZone: Phaser.Geom.Rectangle;
@@ -54,7 +59,7 @@ export interface LevelWorld {
 export function buildLevel(scene: Phaser.Scene, level: LevelData): LevelWorld {
   const M = scene.matter;
   const world: LevelWorld = {
-    props: [], bodyProp: new Map(), bouncers: new Map(), fans: [], vats: [], rockets: [], gift: null,
+    props: [], bodyProp: new Map(), bouncers: new Map(), fans: [], vats: [], hot: [], crackers: [], rockets: [], gift: null,
     stageZone: new Phaser.Geom.Rectangle(), stageGlow: null as unknown as Img, movables: [], dynamicCount: 0,
   };
   const decor = scene.add.graphics().setDepth(5);
@@ -116,6 +121,21 @@ export function buildLevel(scene: Phaser.Scene, level: LevelData): LevelWorld {
   }
 
   return world;
+
+  function flames(x: number, y: number, spread: number, height: number) {
+    scene.add.particles(0, 0, 'px_flame', {
+      x: { min: x - spread, max: x + spread }, y, speedY: { min: -60 - height * 2, max: -30 - height }, speedX: { min: -12, max: 12 },
+      lifespan: 520, frequency: 55, scale: { start: 0.9, end: 0.1 }, alpha: { start: 0.9, end: 0 }, blendMode: 'ADD',
+      tint: [0xffd36b, 0xff9a3c, 0xff5a1f],
+    }).setDepth(16);
+  }
+
+  function steam(x: number, y: number, spread: number) {
+    scene.add.particles(0, 0, 'px_smoke', {
+      x: { min: x - spread, max: x + spread }, y, speedY: { min: -40, max: -20 }, lifespan: 1200, frequency: 320,
+      scale: { start: 0.3, end: 0.9 }, alpha: { start: 0.22, end: 0 },
+    }).setDepth(17);
+  }
 
   function build(o: ObjDef) {
     const baseY = o.y ?? GROUND_Y;
@@ -334,6 +354,29 @@ export function buildLevel(scene: Phaser.Scene, level: LevelData): LevelWorld {
         const top = o.y ?? GROUND_Y - h;
         staticBox(o.x, top + h / 2, w, h, { label: 'block', friction: 0.8 });
         scene.add.image(o.x, top + h / 2, sizedTexture(scene, o.style ?? 'table', w, h)).setDepth(9);
+        break;
+      }
+      case 'kadhai': {
+        const img = scene.add.image(o.x, GROUND_Y - 62, 'kadhai').setDepth(16);
+        scene.add.image(o.x, GROUND_Y - 23, 'stove').setDepth(15);
+        flames(o.x, GROUND_Y - 36, 50, 14);
+        steam(o.x, GROUND_Y - 80, 50);
+        world.hot.push({ kind: 'kadhai', rect: new Phaser.Geom.Rectangle(o.x - 64, GROUND_Y - 110, 128, 70), x: o.x, y: GROUND_Y - 70, lastLaunch: -1, img });
+        break;
+      }
+      case 'tandoor': {
+        const img = scene.add.image(o.x, GROUND_Y - 48, 'tandoor').setDepth(16);
+        flames(o.x, GROUND_Y - 96, 16, 40);
+        world.hot.push({ kind: 'fire', rect: new Phaser.Geom.Rectangle(o.x - 40, GROUND_Y - 170, 80, 140), x: o.x, y: GROUND_Y - 110, lastLaunch: -1, img });
+        break;
+      }
+      case 'cracker': {
+        const y = (o.y ?? GROUND_Y) - 24;
+        const img = scene.add.image(o.x, y, 'cracker').setDepth(17);
+        const spark = scene.add.particles(o.x + 2, y - 26, 'px_glow', {
+          lifespan: 300, speed: { min: 10, max: 40 }, scale: { start: 0.18, end: 0 }, frequency: 120, blendMode: 'ADD', tint: 0xffd36b,
+        }).setDepth(18);
+        world.crackers.push({ x: o.x, y, img, spark, live: true });
         break;
       }
       default:

@@ -13,6 +13,29 @@ export interface SaveData {
 
 const fresh = (): SaveData => ({ v: 1, levels: {}, sfx: 0.8, music: 0.5, muted: false, tutorialDone: false, voice: true });
 
+const num = (v: unknown, lo: number, hi: number, d: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
+const bool = (v: unknown, d: boolean) => (typeof v === 'boolean' ? v : d);
+
+/** Saves can be edited by players or corrupted: copy only known fields, with types and ranges checked. */
+function sanitize(raw: Record<string, unknown>): SaveData {
+  const out = fresh();
+  out.sfx = num(raw.sfx, 0, 1, out.sfx);
+  out.music = num(raw.music, 0, 1, out.music);
+  out.muted = bool(raw.muted, false);
+  out.tutorialDone = bool(raw.tutorialDone, false);
+  out.voice = bool(raw.voice, true);
+  const lv = raw.levels;
+  if (lv && typeof lv === 'object') {
+    for (let id = 1; id <= 50; id++) {
+      const r = (lv as Record<string, unknown>)[String(id)];
+      if (!r || typeof r !== 'object') continue;
+      const rec = r as Record<string, unknown>;
+      out.levels[id] = { stars: Math.round(num(rec.stars, 0, 3, 0)), best: Math.round(num(rec.best, 0, 1e7, 0)), cleared: bool(rec.cleared, false) };
+    }
+  }
+  return out;
+}
+
 class SaveManagerImpl {
   data: SaveData = fresh();
 
@@ -21,7 +44,7 @@ class SaveManagerImpl {
       const raw = await platform.load();
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed && parsed.v === 1) this.data = { ...fresh(), ...parsed };
+        if (parsed && parsed.v === 1) this.data = sanitize(parsed);
       }
     } catch { this.data = fresh(); }
   }
