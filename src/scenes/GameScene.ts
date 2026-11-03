@@ -362,6 +362,7 @@ export class GameScene extends Phaser.Scene {
     this.setBarrelAngle(angle);
     // juice
     AudioManager.play('boom');
+    AudioManager.play('slide');
     this.time.delayedCall(120, () => this.react('launch', m.x, m.y - 40, Math.random() < 0.6 ? 'aah' : undefined, true));
     const mz = this.muzzle(angle, 120);
     this.smoke.explode(18, mz.x, mz.y);
@@ -378,7 +379,7 @@ export class GameScene extends Phaser.Scene {
     this.flailUsed = true;
     this.ragdoll.push(0, -PHYS.flailNudge);
     this.ragdoll.flail();
-    AudioManager.play('flail');
+    AudioManager.play('flail'); AudioManager.play('zip');
     const t = this.ragdoll.torso.position;
     this.petals.explode(8, t.x, t.y);
     this.popText(t.x, t.y - 40, 'Rukooo!', '#ffffff', 26);
@@ -451,6 +452,7 @@ export class GameScene extends Phaser.Scene {
     SaveManager.record(L.id, false, 0, 0);
     Analytics.track('level_fail', { level: L.id, damage: this.damage.total });
     AudioManager.play('sad');
+    AudioManager.play('fallscream');
     this.time.delayedCall(700, () => this.react('fail', 0, 0));
     bus.emit('hud:toast', 'Shaadi miss ho gayi!', 'Out of launches');
     const data: ResultData = { levelId: L.id, cleared: false, stars: 0, damage: this.damage.total, score: 0, launchesLeft: 0, gift: !!this.world.gift?.collected, newBest: false, badge: null, target: L.damageTarget, hasGift: !!L.gift };
@@ -670,6 +672,7 @@ export class GameScene extends Phaser.Scene {
           AudioManager.play('crash', rel / 16);
           if (rel > 9) {
             const hard = ['wall', 'pillar', 'arch', 'backdrop', 'block', 'table', 'vatRim'].includes(other.label);
+            if (hard) AudioManager.play('bonk');
             this.react(hard ? 'wall' : 'ground', part.position.x, part.position.y, hard ? 'ouch' : 'oof');
           }
         }
@@ -703,7 +706,7 @@ export class GameScene extends Phaser.Scene {
     const vy = -Math.min(22, b.speed + Math.abs(v.y) * 0.25);
     const vx = Phaser.Math.Clamp(v.x * 0.85, -16, 16) + (Math.abs(v.x) < 2 ? 2 : 0);
     r.setVelocity(vx, vy);
-    AudioManager.play(b.kind === 'dhol' ? 'dhol' : 'bounce');
+    AudioManager.play(b.kind === 'dhol' ? 'dhol' : 'bounce'); AudioManager.play('boing');
     this.tweens.add({ targets: b.img, scaleY: 0.78, scaleX: 1.12, duration: 70, yoyo: true, ease: 'Quad.out' });
     this.petals.explode(10, b.body.position.x, b.body.position.y - 30);
     this.recorder.mark(3);
@@ -860,7 +863,7 @@ export class GameScene extends Phaser.Scene {
     if (r.who !== 'host') this.lastReactAt = now;
     if (r.who === 'host') bus.emit('hud:live', r.text);
     else this.bubble(x, y, r.text, r.who);
-    Commentary.speak(r.who, r.line, r.priority);
+    Commentary.speak(r.who, r.line, r.priority, r.id);
   }
 
   private bubble(x: number, y: number, text: string, who: Speaker) {

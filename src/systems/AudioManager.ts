@@ -3,7 +3,8 @@
 export type Sfx =
   | 'boom' | 'whoosh' | 'dhol' | 'crash' | 'laddoo' | 'click' | 'ohh' | 'whistle'
   | 'shehnai' | 'sad' | 'pop' | 'star' | 'splat' | 'combo' | 'gift' | 'bounce' | 'flail'
-  | 'ouch' | 'aah' | 'haaye' | 'arre' | 'yay' | 'oof' | 'sizzle' | 'blast';
+  | 'ouch' | 'aah' | 'haaye' | 'arre' | 'yay' | 'oof' | 'sizzle' | 'blast'
+  | 'slide' | 'bonk' | 'boing' | 'fallscream' | 'zip';
 
 class AudioManagerImpl {
   ctx: AudioContext | null = null;
@@ -237,6 +238,29 @@ class AudioManagerImpl {
       case 'haaye': this.vocal(t, 520, 380, 0.5, [850, 1400], [700, 1900], 0.4, out); break;
       case 'arre': this.vocal(t, 150, 120, 0.42, [650, 1100], [500, 1700], 0.55, out); break;
       case 'yay': this.vocal(t, 330, 520, 0.4, [700, 1200], [500, 2000], 0.45, out); break;
+      // original cartoon-style effects
+      case 'slide': { // slide whistle up
+        const o = this.tone('sine', 500, 1800, t, 0.45, 0.28, out, 0.02);
+        void o; break;
+      }
+      case 'zip': this.tone('square', 1200, 300, t, 0.12, 0.08, out); break;
+      case 'bonk': // wooden knock + ring
+        this.tone('triangle', 900, 300, t, 0.08, 0.5, out);
+        this.tone('sine', 1650, 1600, t + 0.01, 0.35, 0.18, out);
+        this.noiseHit(t, 0.03, 0.4, 'bandpass', 2500, 2000, out, 3);
+        break;
+      case 'boing': { // spring
+        const c = this.ctx; const o = c.createOscillator(); const lfo = c.createOscillator(); const lg = c.createGain(); const g = c.createGain();
+        o.type = 'triangle'; o.frequency.setValueAtTime(180, t); o.frequency.exponentialRampToValueAtTime(420, t + 0.5);
+        lfo.frequency.setValueAtTime(18, t); lfo.frequency.linearRampToValueAtTime(6, t + 0.5); lg.gain.value = 60;
+        lfo.connect(lg); lg.connect(o.frequency);
+        this.env(g, t, 0.005, 0.45, 0.5); o.connect(g); g.connect(out);
+        [o, lfo].forEach((n) => { n.start(t); n.stop(t + 0.6); });
+        break;
+      }
+      case 'fallscream': // long descending cartoon yell
+        this.vocal(t, 620, 160, 1.4, [900, 1300], [500, 900], 0.4, out);
+        break;
       case 'sizzle':
         this.noiseHit(t, 0.7, 0.35, 'highpass', 3000, 6000, out, 0.8);
         this.noiseHit(t + 0.05, 0.4, 0.2, 'bandpass', 5000, 2500, out, 2);
@@ -259,6 +283,17 @@ class AudioManagerImpl {
         break;
       }
     }
+  }
+
+  /** Plays a decoded clip (voice pack) through the effects bus. */
+  playBuffer(buf: AudioBuffer, rate = 1) {
+    if (!this.ctx || this.ctx.state !== 'running') return null;
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf; src.playbackRate.value = rate;
+    const g = this.ctx.createGain(); g.gain.value = 1.3;
+    src.connect(g); g.connect(this.sfxGain);
+    src.start();
+    return src;
   }
 
   private vocal(t: number, p0: number, p1: number, dur: number, f0: [number, number], f1: [number, number], vol: number, out: AudioNode) {

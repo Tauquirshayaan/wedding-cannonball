@@ -15,7 +15,8 @@
     "build:all": "npm run typecheck && npm run build:web && npm run build:single && npm run build:poki && npm run build:crazygames && npm run build:youtube && node scripts/package.mjs",
     "preview": "vite preview --host",
     "serve": "node scripts/serve.mjs dist/web 8080",
-    "loadtest": "node scripts/loadtest.mjs http://localhost:8080 1000"
+    "loadtest": "node scripts/loadtest.mjs http://localhost:8080 1000",
+    "voices": "node scripts/make-voices.mjs"
   },
   "dependencies": {
     "phaser": "^3.90.0"

@@ -119,3 +119,14 @@ All art and audio is generated in code in this repository, so there are no third
 - `scripts/serve.mjs` serves only files that exist in the build, so there is no path traversal. It sends `nosniff`, `no-referrer`, `Permissions-Policy` and `COOP` headers, with immutable caching for hashed assets.
 
 **Self-hosting:** `npm run build && npm run serve`. Behind a CDN (Cloudflare, Netlify, itch.io and the portals all use one), concurrent players are effectively unlimited, because every file is static and cacheable.
+
+## Voice
+
+The game uses the first of these that's available:
+1. **A recorded voice pack** in `public/voice/` (one `<id>.mp3` per line).
+   - Generate it in a natural male Indian voice (Azure `hi-IN-MadhurNeural`): `AZURE_SPEECH_KEY=… AZURE_SPEECH_REGION=centralindia npm run voices`.
+   - Or record the lines yourself: the script is in `VOICE_LINES.md`. Drop the files in, then run `npm run voices -- --manifest`.
+2. **The device's speech engine**, but only if it has a male Indian (Hindi or en-IN) voice.
+3. **Otherwise, no speech:** speech bubbles, the LIVE ticker and cartoon reaction sounds only.
+
+All reaction sounds (slide whistle, bonk, boing, falling scream, sizzle, blast) are synthesised in code, so they're original and safe for every portal.
