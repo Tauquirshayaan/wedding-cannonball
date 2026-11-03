@@ -8,7 +8,8 @@ import { AudioManager } from '../systems/AudioManager';
 import { Analytics } from '../systems/Analytics';
 import { rupees } from '../systems/DamageTracker';
 import { platform } from '../platform/Platform';
-import { LEVELS } from '../levels';
+import { LEVELS, EndlessRun } from '../levels';
+import { ENDLESS_BASE, ENDLESS_UNLOCK_AFTER } from '../levels/endless';
 import type { ResultData } from './GameScene';
 
 const TIPS = [
@@ -172,28 +173,40 @@ export class LevelSelectScene extends Phaser.Scene {
       }
     });
     new Button(this, 110, 660, '◀ Back', () => this.scene.start('Title'), { w: 170, h: 60, size: 26, color: 0x7a1c2e });
+    const endlessOpen = SaveManager.level(ENDLESS_UNLOCK_AFTER).cleared;
+    const eb = SaveManager.data.endless;
+    const endless = new Button(this, GAME_W / 2, 660, endlessOpen ? '∞ ENDLESS BARAAT' : `∞ Endless · clear level ${ENDLESS_UNLOCK_AFTER}`, () => { if (endlessOpen) newEndlessRun(this); },
+      { w: 420, h: 64, size: endlessOpen ? 28 : 22, color: endlessOpen ? 0xf7a21b : 0x3a2f5a });
+    if (!endlessOpen) endless.setEnabled(false);
+    if (endlessOpen && eb.round > 0) this.add.text(GAME_W / 2 + 230, 660, `Best: round ${eb.round}\n${rupees(eb.damage)}`, { fontFamily: FONT, fontSize: '18px', color: '#ffe9b8', fontStyle: 'bold' }).setOrigin(0, 0.5);
     soundToggle(this, GAME_W - 56, 56);
     this.input.keyboard?.once('keydown-ESC', () => this.scene.start('Title'));
   }
 }
 
-export function startLevel(scene: Phaser.Scene, id: number) {
+export function startLevel(scene: Phaser.Scene, id: number, run: EndlessRun | null = null) {
   for (const k of ['Result', 'Pause', 'Hud', 'Game']) if (k !== scene.scene.key && scene.scene.isActive(k)) scene.scene.stop(k);
-  scene.scene.start('Game', { levelId: id });
+  scene.scene.start('Game', { levelId: id, run });
+}
+
+export function newEndlessRun(scene: Phaser.Scene) {
+  Analytics.track('endless_start');
+  startLevel(scene, ENDLESS_BASE + 1, { seed: Math.floor(Math.random() * 1e9), round: 1, damage: 0 });
 }
 
 // ---------------------------------------------------------------- Pause
 export class PauseScene extends Phaser.Scene {
   constructor() { super('Pause'); }
-  create(data: { levelId: number }) {
+  create(data: { levelId: number; run?: EndlessRun | null; name: string }) {
     this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.55).setOrigin(0).setInteractive();
     panel(this, GAME_W / 2, GAME_H / 2, 520, 470);
-    const L = LEVELS[data.levelId - 1];
+    const L = { id: data.levelId, name: data.name };
+    const run = data.run ?? null;
     title(this, GAME_W / 2, 175, 'Paused', 54);
-    this.add.text(GAME_W / 2, 230, `${L.id}. ${L.name}`, { fontFamily: FONT, fontSize: '26px', color: '#ffe9b8' }).setOrigin(0.5);
+    this.add.text(GAME_W / 2, 230, run ? `Endless · Round ${run.round}: ${L.name}` : `${L.id}. ${L.name}`, { fontFamily: FONT, fontSize: '26px', color: '#ffe9b8' }).setOrigin(0.5);
     const resume = () => { this.scene.stop(); this.scene.resume('Game'); platform.gameplayStart(); };
     new Button(this, GAME_W / 2, 310, 'Resume', resume, { w: 300, h: 70, size: 32 });
-    new Button(this, GAME_W / 2, 395, 'Restart', () => { Analytics.track('retry', { level: L.id }); this.scene.stop(); startLevel(this, L.id); }, { w: 300, h: 64, size: 28, color: 0xf7a21b });
+    new Button(this, GAME_W / 2, 395, 'Restart', () => { Analytics.track('retry', { level: L.id }); this.scene.stop(); startLevel(this, L.id, run); }, { w: 300, h: 64, size: 28, color: 0xf7a21b });
     new Button(this, GAME_W / 2, 475, 'Levels', () => { this.scene.stop('Hud'); this.scene.stop('Game'); this.scene.start('LevelSelect'); }, { w: 300, h: 64, size: 28, color: 0x7a1c2e });
     soundToggle(this, GAME_W / 2 + 200, 175);
     this.input.keyboard?.once('keydown-ESC', resume);
@@ -251,7 +264,8 @@ export class SettingsScene extends Phaser.Scene {
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
   create(d: ResultData) {
-    const L = LEVELS[d.levelId - 1];
+    if (d.run) { this.endless(d); return; }
+    const L = { id: d.levelId, name: d.name };
     this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.5).setOrigin(0).setInteractive();
     panel(this, GAME_W / 2, GAME_H / 2, 700, 620, d.cleared ? 0x7a1c2e : 0x3a2f5a);
     title(this, GAME_W / 2, 92, d.cleared ? 'Pahunch Gaye!' : 'Shaadi Miss Ho Gayi!', 52, d.cleared ? '#f4c430' : '#ff9ad0');
@@ -311,10 +325,57 @@ export class ResultScene extends Phaser.Scene {
     if (hasNext) this.input.keyboard?.once('keydown-ENTER', () => { void go(d.levelId + 1); });
   }
 
+  /** Result screen for an Endless Baraat round. */
+  private endless(d: ResultData) {
+    const run = d.run!;
+    this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.5).setOrigin(0).setInteractive();
+    panel(this, GAME_W / 2, GAME_H / 2, 700, 620, d.cleared ? 0x7a1c2e : 0x3a2f5a);
+    title(this, GAME_W / 2, 100, d.cleared ? `Round ${run.round} Cleared!` : 'Run Over!', 52, d.cleared ? '#f4c430' : '#ff9ad0');
+    this.add.text(GAME_W / 2, 156, `Endless Baraat · ${d.name}`, { fontFamily: FONT, fontSize: '24px', color: '#ffe9b8' }).setOrigin(0.5);
+    const cleared = d.cleared ? run.round : run.round - 1;
+    const best = SaveManager.data.endless;
+    const lines = [
+      [`Rounds cleared`, `${cleared}`],
+      [`This round's damage`, rupees(d.damage)],
+      [`Run total`, rupees(run.damage)],
+      [`Best run`, `round ${best.round} · ${rupees(best.damage)}`],
+    ];
+    lines.forEach(([k, v], i) => {
+      this.add.text(GAME_W / 2 - 230, 220 + i * 54, k, { fontFamily: FONT, fontSize: '26px', color: '#ffe9b8' }).setOrigin(0, 0.5);
+      this.add.text(GAME_W / 2 + 230, 220 + i * 54, v, { fontFamily: FONT, fontSize: '28px', color: '#f4c430', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 5 }).setOrigin(1, 0.5);
+    });
+    if (!d.cleared && d.recordRun) {
+      const nb = this.add.text(GAME_W / 2, 445, 'NEW BEST RUN!', { fontFamily: FONT, fontSize: '28px', color: '#7dff9a', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 5 }).setOrigin(0.5);
+      this.tweens.add({ targets: nb, scale: 1.12, duration: 400, yoyo: true, repeat: -1 });
+    }
+    const buttons: Button[] = [];
+    const go = async (fn: () => void) => {
+      for (const b of buttons) b.setEnabled(false);
+      AudioManager.setExternalMute(true);
+      await platform.commercialBreak();
+      AudioManager.setExternalMute(false);
+      fn();
+    };
+    const by = 530;
+    if (d.cleared) {
+      const next = () => startLevel(this, ENDLESS_BASE + run.round + 1, { ...run, round: run.round + 1 });
+      buttons.push(new Button(this, GAME_W / 2, by, `Round ${run.round + 1} ▶`, () => void go(next), { w: 320, h: 74, size: 32 }));
+      this.input.keyboard?.once('keydown-ENTER', () => void go(next));
+    } else {
+      buttons.push(new Button(this, GAME_W / 2, by, '↻ New Run', () => void go(() => newEndlessRun(this)), { w: 320, h: 74, size: 32 }));
+      this.input.keyboard?.once('keydown-R', () => void go(() => newEndlessRun(this)));
+    }
+    buttons.push(new Button(this, GAME_W / 2 - 130, by + 92, 'Levels', () => { this.scene.stop('Hud'); this.scene.stop('Game'); this.scene.start('LevelSelect'); }, { w: 220, h: 60, size: 26, color: 0x7a1c2e }));
+    const share = new Button(this, GAME_W / 2 + 130, by + 92, 'Share', () => void this.share(d, share), { w: 220, h: 60, size: 26, color: 0x3e9b3a });
+    buttons.push(share);
+  }
+
   private async share(d: ResultData, btn: Button) {
     Analytics.track('share_click', { level: d.levelId });
     const link = platform.allowExternalLinks ? ' ' + window.location.href.split('?')[0] : '';
-    const text = `I caused ${rupees(d.damage)} of Shaadi Damage on Level ${d.levelId} of Human Cannonball: Wedding Edition 🎆 Can you beat it?${link}`;
+    const text = d.run
+      ? `I survived ${d.cleared ? d.run.round : d.run.round - 1} rounds of Endless Baraat with ${rupees(d.run.damage)} of Shaadi Damage in Human Cannonball: Wedding Edition 🎆 Can you beat it?${link}`
+      : `I caused ${rupees(d.damage)} of Shaadi Damage on Level ${d.levelId} of Human Cannonball: Wedding Edition 🎆 Can you beat it?${link}`;
     try {
       const nav = navigator as Navigator & { share?: (d: { text: string; title?: string }) => Promise<void> };
       if (nav.share && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {

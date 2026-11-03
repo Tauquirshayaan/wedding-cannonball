@@ -116,6 +116,52 @@ async function winLevel(p, id) {
   const saved = await game(p, () => JSON.parse(localStorage.getItem('hc_wedding_save_v1') || '{}'));
   check(saved.levels && Object.keys(saved.levels).length === 10 && saved.levels[10].cleared, 'progress saved for all 10 levels');
 
+  // endless baraat
+  console.log('\n[endless baraat]');
+  await game(p, () => { const g = window.__hcGame; for (const k of ['Result', 'Game', 'Hud']) if (g.scene.isActive(k)) g.scene.stop(k); g.scene.start('LevelSelect'); });
+  await p.waitForTimeout(400);
+  await p.mouse.click(640, 660);
+  check(await until(p, () => window.__hcScene && window.__hcScene.run && window.__hcScene.run.round === 1 && window.__hcGame.scene.isActive('Game')), 'Endless button starts round 1 (unlocked after level 3)');
+  const seed = await game(p, () => window.__hcScene.run.seed);
+  let runDamage = 0;
+  for (let round = 1; round <= 6; round++) {
+    const w = await game(p, async ({ round, seed, runDamage }) => {
+      const g = window.__hcGame; const frame = () => new Promise((r) => requestAnimationFrame(r));
+      for (const a of [40, 35, 45, 30, 50, 55, 25, 60, 20, 65, 70]) for (let pw = 1; pw >= 0.3; pw -= 0.05) {
+        for (const k of ['Result', 'Pause']) if (g.scene.isActive(k)) g.scene.stop(k);
+        window.__hcResult = null;
+        g.scene.start('Game', { levelId: 1000 + round, run: { seed, round, damage: runDamage } });
+        await frame(); await frame();
+        const s = window.__hcScene; s.testSteps = 120; s.testLaunch(a, +pw.toFixed(2));
+        let n = 0; while (s.state === 'flight' && n++ < 400) await frame();
+        if (s.state === 'ending' || s.state === 'done') { n = 0; while (!window.__hcResult && n++ < 200) await frame(); return { a, pw: +pw.toFixed(2), r: window.__hcResult, name: s.level.name }; }
+      }
+      return null;
+    }, { round, seed, runDamage });
+    const r = w && w.r;
+    check(!!(r && r.cleared && r.run && r.run.round === round && r.run.damage >= runDamage), `endless round ${round} generated and won with real physics${w ? ` ("${w.name}", ${w.a}° at ${Math.round(w.pw * 100)}%)` : ''}`);
+    if (r && r.run) runDamage = r.run.damage;
+  }
+  const best = await game(p, () => JSON.parse(localStorage.getItem('hc_wedding_save_v1')).endless);
+  check(best && best.round >= 6, `best Endless run saved (round ${best && best.round})`);
+  // lose a round on purpose: 3 tiny shots end the run
+  const over = await game(p, async ({ seed }) => {
+    const g = window.__hcGame; const frame = () => new Promise((r) => requestAnimationFrame(r));
+    for (const k of ['Result', 'Pause']) if (g.scene.isActive(k)) g.scene.stop(k);
+    window.__hcResult = null;
+    g.scene.start('Game', { levelId: 1007, run: { seed, round: 7, damage: 1000 } });
+    await frame(); await frame();
+    const s = window.__hcScene; s.testSteps = 120;
+    // fire three tiny shots that cannot reach the stage
+    let n = 0;
+    while (!window.__hcResult && n++ < 1500) { if (s.state === 'intro' || s.state === 'aim') s.testLaunch(10, 0.12); await frame(); }
+    return window.__hcResult;
+  }, { seed });
+  check(!!(over && !over.cleared && over.run), 'failing a round ends the run (Run Over screen)');
+  await p.waitForTimeout(400);
+  await p.mouse.click(640, 530);
+  check(await until(p, () => window.__hcScene && window.__hcScene.run && window.__hcScene.run.round === 1 && window.__hcScene.run.damage === 0, null, 8000), 'New Run starts again from round 1');
+
   // reload: progress survives, level select shows unlocks
   await p.reload();
   await until(p, () => window.__hcGame && window.__hcGame.scene.isActive('Title'));

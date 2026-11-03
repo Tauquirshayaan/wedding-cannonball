@@ -9,9 +9,10 @@ export interface SaveData {
   muted: boolean;
   tutorialDone: boolean;
   voice: boolean;
+  endless: { round: number; damage: number };
 }
 
-const fresh = (): SaveData => ({ v: 1, levels: {}, sfx: 0.8, music: 0.5, muted: false, tutorialDone: false, voice: true });
+const fresh = (): SaveData => ({ v: 1, levels: {}, sfx: 0.8, music: 0.5, muted: false, tutorialDone: false, voice: true, endless: { round: 0, damage: 0 } });
 
 const num = (v: unknown, lo: number, hi: number, d: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
 const bool = (v: unknown, d: boolean) => (typeof v === 'boolean' ? v : d);
@@ -24,6 +25,8 @@ function sanitize(raw: Record<string, unknown>): SaveData {
   out.muted = bool(raw.muted, false);
   out.tutorialDone = bool(raw.tutorialDone, false);
   out.voice = bool(raw.voice, true);
+  const e = raw.endless as Record<string, unknown> | undefined;
+  if (e && typeof e === 'object') out.endless = { round: Math.round(num(e.round, 0, 1e4, 0)), damage: Math.round(num(e.damage, 0, 1e9, 0)) };
   const lv = raw.levels;
   if (lv && typeof lv === 'object') {
     for (let id = 1; id <= 50; id++) {
@@ -76,6 +79,14 @@ class SaveManagerImpl {
     };
     this.persist();
     return newBest;
+  }
+
+  /** Records a finished Endless run; returns true if it beats the best. */
+  recordEndless(round: number, damage: number) {
+    const b = this.data.endless;
+    const better = round > b.round || (round === b.round && damage > b.damage);
+    if (better) { this.data.endless = { round, damage }; this.persist(); }
+    return better;
   }
 
   reset() {

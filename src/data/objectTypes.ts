@@ -9,7 +9,7 @@ export const OBJ = {
   vat: { damage: -500, h: 64 },
   canopy: { damage: 200, restitution: 1.1, bounceSpeed: 13.5, h: 26, cooldownMs: 250 },
   relative: { damage: 1000, w: 46, h: 92, hitSpeed: 2 },
-  rocket: { damage: 500, radius: 46, boostSpeed: 26 },
+  rocket: { damage: 500, radius: 46, boostSpeed: 20 },
   gift: { radius: 34 },
   cake: { damage: 1000, tiers: [ { w: 150, h: 54 }, { w: 116, h: 48 }, { w: 82, h: 44 } ], density: 0.0012 },
   stage: { h: 46, zoneHeight: 80, backdropH: 210 },

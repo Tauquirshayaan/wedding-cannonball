@@ -34,7 +34,7 @@ export const CUES: Record<string, Cue> = {
   ground: { who: 'lucky', priority: 1, lines: [L('Oof!', 'ऊफ़!'), L('Zameen pe!', 'ज़मीन पे!'), L('Aah, kamar!', 'आह, कमर!')] },
   turban: { who: 'lucky', priority: 3, lines: [L('Meri pagdi!', 'मेरी पगड़ी!'), L('Pagdi wapas do!', 'पगड़ी वापस दो!')] },
   missShort: { who: 'host', priority: 4, lines: [L('Thoda aur zor se!', 'थोड़ा और ज़ोर से!'), L('Stage abhi door hai!', 'स्टेज अभी दूर है!')] },
-  missLong: { who: 'host', priority: 4, lines: [L('Bahut zyada power!', 'बहुत ज़्यादा पावर!'), L('Stage peeche reh gaya!', 'स्टेज पीछे रह गया!')] },
+  missLong: { who: 'host', priority: 4, lines: [L('Bahut zyada power!', 'बहुत ज़्यादा पावर!'), L('Stage peeche reh gaya!', 'स्टेज पीछे रह गया!'), L('Stage ke upar se nikal gaya!', 'स्टेज के ऊपर से निकल गया!')] },
   missNear: { who: 'host', priority: 4, lines: [L('Bas thoda sa chuk gaya!', 'बस थोड़ा सा चूक गया!'), L('Itne paas!', 'इतने पास!')] },
   missVat: { who: 'host', priority: 4, lines: [L('Chashni mein dubki! Minus paanch sau!', 'चाशनी में डुबकी! माइनस पाँच सौ!')] },
   lastLaunch: { who: 'host', priority: 4, lines: [L('Aakhri mauka!', 'आखिरी मौका!')] },

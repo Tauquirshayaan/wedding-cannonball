@@ -82,9 +82,8 @@ export function buildLevel(scene: Phaser.Scene, level: LevelData): LevelWorld {
   staticBox(-25, GROUND_Y - 1500, 50, 3200, { label: 'wall' });
   // when the stage is the last thing in the level, the end wall sits flush behind it so an
   // overshoot drops back onto the stage instead of into a gap behind the backdrop
-  const stageEnd = level.stage.x + level.stage.w;
-  const rightEdge = stageEnd >= level.width - 150 ? stageEnd : level.width;
-  staticBox(rightEdge + 25, GROUND_Y - 1500, 50, 3200, { label: 'wall' });
+  // the world ends well past the stage: a shot that clears the backdrop sails over and misses
+  staticBox(level.width + 25, GROUND_Y - 1500, 50, 3200, { label: 'wall' });
 
   // --- stage ---
   const s = level.stage;

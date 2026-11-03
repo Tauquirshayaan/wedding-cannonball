@@ -94,6 +94,10 @@ export class HudScene extends Phaser.Scene {
     on('hud:power', (p: number | null) => this.drawPower(p));
     on('hud:flail', () => this.flailHint.setAlpha(0));
     on('hud:hide', () => this.root.setVisible(false));
+    on('hud:run', (run: { round: number; damage: number }) => {
+      const t = this.add.text(30, 98, `∞ Run total ${rupees(run.damage)}`, { fontFamily: FONT, fontSize: '18px', color: '#ffe9b8', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 4 });
+      this.root.add(t);
+    });
     // LIVE commentary ticker
     const liveBg = this.add.graphics();
     const livePill = this.add.graphics();
@@ -163,7 +167,7 @@ export class HudScene extends Phaser.Scene {
 
   private init2(level: LevelData, launches: number) {
     this.level = level;
-    const name = this.add.text(30, 30, `${level.id}. ${level.name}`, { fontFamily: FONT, fontSize: '24px', color: '#ffffff', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 5 }).setOrigin(0, 0.5);
+    const name = this.add.text(30, 30, level.id >= 1000 ? `Round ${level.id - 1000}: ${level.name}` : `${level.id}. ${level.name}`, { fontFamily: FONT, fontSize: '24px', color: '#ffffff', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 5 }).setOrigin(0, 0.5);
     this.root.add(name);
     for (let i = 0; i < PHYS.launchesPerLevel; i++) {
       const ic = this.add.image(46 + i * 40, 62, 'cannon_icon').setScale(0.9);

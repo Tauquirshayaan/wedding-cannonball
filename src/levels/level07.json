@@ -13,7 +13,7 @@
   "w": 340
  },
  "gift": {
-  "x": 1150,
+  "x": 975,
   "y": 230
  },
  "damageTarget": 800,
@@ -27,13 +27,13 @@
    "type": "rocket",
    "x": 850,
    "y": 380,
-   "angle": -30
+   "angle": -34
   },
   {
    "type": "rocket",
-   "x": 1450,
-   "y": 320,
-   "angle": -20
+   "x": 1100,
+   "y": 300,
+   "angle": -58
   },
   {
    "type": "laddooPyramid",

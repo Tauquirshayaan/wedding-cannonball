@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { GAME_W, GAME_H, GROUND_Y, PHYS, STEP_MS, FONT } from '../config';
 import { OBJ } from '../data/objectTypes';
-import { LEVELS } from '../levels';
+import { getLevel, EndlessRun } from '../levels';
+import { ENDLESS_BASE } from '../levels/endless';
 import { themeFor, outfitFor, themeTextures, releaseThemeTextures } from '../art/Themes';
 import type { LevelData } from '../levels/types';
 import { buildLevel, LevelWorld, Prop, Bouncer } from '../objects/LevelBuilder';
@@ -18,7 +19,7 @@ import { platform } from '../platform/Platform';
 type State = 'intro' | 'aim' | 'flight' | 'between' | 'ending' | 'replay' | 'done';
 
 export interface ResultData {
-  levelId: number; cleared: boolean; stars: number; damage: number; score: number; launchesLeft: number;
+  levelId: number; name: string; run?: EndlessRun | null; recordRun?: boolean; cleared: boolean; stars: number; damage: number; score: number; launchesLeft: number;
   gift: boolean; newBest: boolean; badge: string | null; target: number; hasGift: boolean;
 }
 
@@ -83,9 +84,11 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  init(data: { levelId?: number }) {
-    const id = Phaser.Math.Clamp(data.levelId ?? 1, 1, LEVELS.length);
-    this.level = LEVELS[id - 1];
+  run: EndlessRun | null = null;
+
+  init(data: { levelId?: number; run?: EndlessRun | null }) {
+    this.run = (data.levelId ?? 1) >= ENDLESS_BASE && data.run ? { ...data.run } : null;
+    this.level = getLevel(data.levelId ?? 1, this.run);
     this.state = 'intro';
     this.launchesLeft = PHYS.launchesPerLevel;
     this.launchIndex = -1;
@@ -162,6 +165,7 @@ export class GameScene extends Phaser.Scene {
 
     // --- HUD ---
     this.scene.launch('Hud', { levelId: L.id });
+    if (this.run) this.time.delayedCall(20, () => bus.emit('hud:run', this.run));
     this.scene.bringToTop('Hud');
     const on = (e: string, fn: (...a: unknown[]) => void) => { bus.on(e, fn); this.hudHandlers.push([e, fn]); };
     on('hud:pause', () => this.pauseGame());
@@ -298,26 +302,36 @@ export class GameScene extends Phaser.Scene {
     bus.emit('hud:aim', { sx: this.aim.sx, sy: this.aim.sy, px: p.x, py: p.y, valid: this.aim.valid, angle: this.aim.angle, power: this.aim.power });
     if (!this.aim.valid) { bus.emit('hud:power', null); return; }
     bus.emit('hud:power', this.aim.power);
-    // dotted preview of the first 25% of the arc
-    const r = Phaser.Math.DegToRad(this.aim.angle);
-    const v = this.aim.power * PHYS.maxLaunchSpeed;
-    let vx = Math.cos(r) * v, vy = -Math.sin(r) * v;
-    const m = this.muzzle(this.aim.angle);
-    let x = m.x, y = m.y;
-    const gStep = PHYS.gravityY * 0.001 * STEP_MS * STEP_MS;
-    const pts: { x: number; y: number }[] = [];
-    for (let i = 0; i < 400; i++) {
-      vx *= 1 - PHYS.airFriction; vy = vy * (1 - PHYS.airFriction) + gStep;
-      x += vx; y += vy;
-      if (i % 3 === 0) pts.push({ x, y });
-      if (y > GROUND_Y || x > this.level.width) break;
-    }
-    const show = Math.max(7, Math.ceil(pts.length * 0.25));
+    // dotted preview of the first part of the real flight path
+    const pts = this.predictPath(this.aim.angle, this.aim.power).filter((_, i) => i % 3 === 0);
+    const show = Math.max(8, Math.ceil(pts.length * 0.35));
     for (let i = 0; i < Math.min(show, pts.length); i++) {
       const a = 1 - i / show;
       g.fillStyle(0xffffff, 0.35 + a * 0.6);
       g.fillCircle(pts[i].x, pts[i].y, (3 + a * 4) / Math.max(0.55, this.cam.zoom));
     }
+  }
+
+  /**
+   * Flight path of Lucky's torso, step by step, using the same integration Matter.js uses
+   * (velocity damped by air friction, then gravity, then position += velocity), starting where
+   * the torso is spawned. Matches the real flight exactly until he touches something.
+   */
+  predictPath(angle: number, power: number, maxSteps = 400) {
+    const r = Phaser.Math.DegToRad(angle);
+    const v = power * PHYS.maxLaunchSpeed;
+    let vx = Math.cos(r) * v, vy = -Math.sin(r) * v;
+    const m = this.muzzle(angle, 96);
+    let x = m.x, y = m.y;
+    const gStep = PHYS.gravityY * 0.001 * STEP_MS * STEP_MS;
+    const pts: { x: number; y: number }[] = [];
+    for (let i = 0; i < maxSteps; i++) {
+      vx *= 1 - PHYS.airFriction; vy = vy * (1 - PHYS.airFriction) + gStep;
+      x += vx; y += vy;
+      pts.push({ x, y });
+      if (y > GROUND_Y || x > this.level.width) break;
+    }
+    return pts;
   }
 
   // ---------------- flow ----------------
@@ -431,12 +445,12 @@ export class GameScene extends Phaser.Scene {
     if (this.damage.total < 500) badge = 'Shareef Guest';
     if (this.damage.total >= L.damageTarget * 2) badge = 'Baraat Wrecker';
     if (launchesUsed === 1) badge = badge === 'Baraat Wrecker' ? badge : 'Ek Shot';
-    const newBest = SaveManager.record(L.id, true, stars, score);
+    const newBest = this.run ? false : SaveManager.record(L.id, true, stars, score);
     Analytics.track('level_clear', { level: L.id, stars, damage: this.damage.total, launches_used: launchesUsed });
     if (stars === 3) platform.happyTime();
     let totalBest = 0;
     for (const k in SaveManager.data.levels) totalBest += SaveManager.data.levels[k].best;
-    platform.sendScore(totalBest);
+    platform.sendScore(this.run ? this.run.damage + this.damage.total : totalBest);
     AudioManager.play('shehnai');
     const t = r.torso.position;
     this.confetti.explode(90, t.x, t.y - 40);
@@ -444,20 +458,25 @@ export class GameScene extends Phaser.Scene {
     this.popText(t.x, t.y - 90, 'PAHUNCH GAYE!', '#f4c430', 46);
     AudioManager.play('yay');
     this.react('win', t.x, t.y);
-    const data: ResultData = { levelId: L.id, cleared: true, stars, damage: this.damage.total, score, launchesLeft: this.launchesLeft, gift, newBest, badge, target: L.damageTarget, hasGift: !!L.gift };
+    const run = this.run ? { ...this.run, damage: this.run.damage + this.damage.total } : null;
+    if (run) { SaveManager.recordEndless(run.round, run.damage); Analytics.track('endless_round_clear', { round: run.round }); }
+    const data: ResultData = { levelId: L.id, name: L.name, run, cleared: true, stars, damage: this.damage.total, score, launchesLeft: this.launchesLeft, gift, newBest, badge, target: L.damageTarget, hasGift: !!L.gift };
     this.time.delayedCall(this.testSteps ? 10 : 1300, () => this.startReplay(() => this.showResult(data)));
   }
 
   private levelFail() {
     this.state = 'ending';
     const L = this.level;
-    SaveManager.record(L.id, false, 0, 0);
+    if (!this.run) SaveManager.record(L.id, false, 0, 0);
     Analytics.track('level_fail', { level: L.id, damage: this.damage.total });
     AudioManager.play('sad');
     AudioManager.play('fallscream');
     this.time.delayedCall(700, () => this.react('fail', 0, 0));
     bus.emit('hud:toast', 'Shaadi miss ho gayi!', 'Out of launches');
-    const data: ResultData = { levelId: L.id, cleared: false, stars: 0, damage: this.damage.total, score: 0, launchesLeft: 0, gift: !!this.world.gift?.collected, newBest: false, badge: null, target: L.damageTarget, hasGift: !!L.gift };
+    const run = this.run ? { ...this.run, damage: this.run.damage + this.damage.total } : null;
+    let recordRun = false;
+    if (run) { recordRun = SaveManager.recordEndless(run.round - 1, run.damage); Analytics.track('endless_over', { round: run.round, damage: run.damage }); }
+    const data: ResultData = { levelId: L.id, name: L.name, run, recordRun, cleared: false, stars: 0, damage: this.damage.total, score: 0, launchesLeft: 0, gift: !!this.world.gift?.collected, newBest: false, badge: null, target: L.damageTarget, hasGift: !!L.gift };
     this.time.delayedCall(this.testSteps ? 10 : 1400, () => this.startReplay(() => this.showResult(data)));
   }
 
@@ -473,7 +492,7 @@ export class GameScene extends Phaser.Scene {
   restart() {
     if (this.scene.isActive('Result') || this.scene.isActive('Pause')) return;
     Analytics.track('retry', { level: this.level.id });
-    this.scene.restart({ levelId: this.level.id });
+    this.scene.restart({ levelId: this.level.id, run: this.run });
   }
 
   private pauseGame() {
@@ -481,7 +500,7 @@ export class GameScene extends Phaser.Scene {
     this.aim.active = false; this.traj.clear(); bus.emit('hud:aim', null);
     platform.gameplayStop();
     this.scene.pause();
-    this.scene.launch('Pause', { levelId: this.level.id });
+    this.scene.launch('Pause', { levelId: this.level.id, run: this.run, name: this.level.name });
     this.scene.bringToTop('Pause');
   }
 
