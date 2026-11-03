@@ -10,7 +10,7 @@ export type Sfx =
   | 'shehnai' | 'sad' | 'pop' | 'star' | 'splat' | 'combo' | 'gift' | 'bounce' | 'flail'
   | 'ouch' | 'aah' | 'haaye' | 'arre' | 'yay' | 'oof' | 'sizzle' | 'blast'
   | 'slide' | 'bonk' | 'boing' | 'fallscream' | 'zip'
-  | 'laugh' | 'fallwhistle';
+  | 'laugh' | 'fallwhistle' | 'burn';
 
 class AudioManagerImpl {
   ctx: AudioContext | null = null;
@@ -174,10 +174,19 @@ class AudioManagerImpl {
   }
 
   /** Plays a recorded clip on a channel (a new clip on the same channel replaces the old one). */
-  private clip(name: Clip, ch: Channel, rate = 1, vol = 1) {
+  /** How many times each recorded clip has played (for audits: window.__hcAudioStats). */
+  readonly stats: Record<string, number> = {};
+  private chanInfo: Partial<Record<Channel, { prio: number; at: number }>> = {};
+
+  private clip(name: Clip, ch: Channel, rate = 1, vol = 1, prio = 1) {
     const buf = this.clips.get(name);
     if (!buf || !this.ctx) return false;
+    // a fresh, more important reaction is not cut off by a minor one
+    const cur = this.chanInfo[ch];
+    if (this.channels[ch] && cur && cur.prio > prio && this.ctx.currentTime - cur.at < 0.7) return true;
     try { this.channels[ch]?.stop(); } catch { /* already ended */ }
+    this.chanInfo[ch] = { prio, at: this.ctx.currentTime };
+    this.stats[name] = (this.stats[name] ?? 0) + 1;
     const src = this.ctx.createBufferSource();
     src.buffer = buf;
     src.playbackRate.value = rate * (0.96 + Math.random() * 0.08);
@@ -198,11 +207,12 @@ class AudioManagerImpl {
     if (!this.ctx || this.ctx.state !== 'running') return;
     // recorded reactions first; the synthesised versions below are the fallback
     switch (name) {
-      case 'aah': if (this.clip('scream', 'voice', 1, 0.9)) return; break;
-      case 'ouch': if (this.clip('ow', 'voice', 1, 1)) return; break;
+      case 'aah': if (this.clip('scream', 'voice', 1, 0.9, 2)) return; break;
+      case 'burn': if (this.clip('awww', 'voice', 1.05, 1, 3)) return; this.play('ouch'); return;
+      case 'ouch': if (this.clip('ow', 'voice', 1, 1, 2)) return; break;
       case 'oof': if (this.clip('ow', 'voice', 0.85, 0.7)) return; break;
       case 'arre': if (this.clip('ow', 'voice', 0.78, 1)) return; break;
-      case 'fallscream': if (this.clip('awww', 'voice', 1, 1)) return; break;
+      case 'fallscream': if (this.clip('awww', 'voice', 1, 1, 4)) return; break;
       case 'laugh': this.clip((['laugh1', 'laugh2', 'laugh3'] as Clip[])[Math.floor(Math.random() * 3)], 'crowd', 1, 0.75); return;
       case 'fallwhistle': this.clip(Math.random() < 0.5 ? 'fallwhistle2' : 'fallwhistle', 'whistle', 1, 0.6); return;
       default: break;
@@ -432,3 +442,4 @@ const MELODY: [number, number, number][] = [
 ];
 
 export const AudioManager = new AudioManagerImpl();
+if (typeof window !== 'undefined') (window as unknown as { __hcAudioStats: Record<string, number> }).__hcAudioStats = AudioManager.stats;

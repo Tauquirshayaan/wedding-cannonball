@@ -31,8 +31,10 @@ function sanitize(raw: Record<string, unknown>): SaveData {
   if (e && typeof e === 'object') out.endless = { round: Math.round(num(e.round, 0, 1e4, 0)), damage: Math.round(num(e.damage, 0, 1e9, 0)) };
   const lv = raw.levels;
   if (lv && typeof lv === 'object') {
-    for (let id = 1; id <= 50; id++) {
-      const r = (lv as Record<string, unknown>)[String(id)];
+    for (const key of Object.keys(lv)) {
+      const id = Number(key);
+      if (!Number.isInteger(id) || id < 1 || id > 1002) continue;
+      const r = (lv as Record<string, unknown>)[key];
       if (!r || typeof r !== 'object') continue;
       const rec = r as Record<string, unknown>;
       out.levels[id] = { stars: Math.round(num(rec.stars, 0, 3, 0)), best: Math.round(num(rec.best, 0, 1e7, 0)), cleared: bool(rec.cleared, false) };

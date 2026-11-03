@@ -37,12 +37,13 @@ npm run build:all       # writes release/human-cannonball-<portal>.zip
 
 ## Automated audit
 
-`npm run build:all && npm run test:e2e` runs 75 checks in headless Chromium:
+`npm run build:all && npm run test:e2e` runs 82 checks in headless Chromium:
 - menus, aiming, flail, cancel, pause and resume, restart, and pause on tab switch
 - a winning shot on all 10 levels, plus saving and reload
 - recovery from a tampered save
 - settings
 - the Poki, CrazyGames and YouTube SDK calls, using mock SDKs
+- generated campaign levels 11, 250, 500 and 1002 won with real physics, identical layouts on every load, and level-select paging
 - Endless Baraat: 6 generated rounds won with real physics, run over, new run, best run saved
 - the Wardrobe: suits unlock with stars, and Lucky wears the chosen outfit in game
 - the single-file build

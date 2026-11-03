@@ -391,7 +391,7 @@ export class GameScene extends Phaser.Scene {
     // juice
     AudioManager.play('boom');
     AudioManager.play('slide');
-    this.time.delayedCall(120, () => this.react('launch', m.x, m.y - 40, Math.random() < 0.6 ? 'aah' : undefined, true));
+    this.time.delayedCall(120, () => this.react('launch', m.x, m.y - 40, 'aah', true));
     const mz = this.muzzle(angle, 120);
     this.smoke.explode(18, mz.x, mz.y);
     this.sparks.explode(14, mz.x, mz.y);
@@ -645,7 +645,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
     // cartoon falling whistle when he drops from high up
-    if (!this.whistled && !this.stuck && r.torso.velocity.y > 7 && t.y < GROUND_Y - 300) { this.whistled = true; AudioManager.play('fallwhistle'); }
+    if (!this.whistled && !this.stuck && r.torso.velocity.y > 6 && t.y < GROUND_Y - 220) { this.whistled = true; AudioManager.play('fallwhistle'); }
     // whoosh on fast flight
     if (r.torso.speed > 20 && this.whooshCooldown <= 0) { AudioManager.play('whoosh', r.torso.speed / 25); this.whooshCooldown = 700; }
     // record replay frame
@@ -746,6 +746,7 @@ export class GameScene extends Phaser.Scene {
     if (rel > PHYS.hitStopSpeed && onProp) this.hitStopMs = 60;
     if (rel > 9 && r.loseTurban()) {
       this.react('turban', x, y);
+      AudioManager.play('laugh');
       this.recorder.mark(2);
     }
     this.recorder.mark(rel / 6);
@@ -789,6 +790,7 @@ export class GameScene extends Phaser.Scene {
       const aunty = prop.name === 'Aunty';
       this.react(aunty ? 'aunty' : 'uncle', x, y - 60, aunty ? 'haaye' : 'arre', true);
       AudioManager.play('ohh');
+      this.time.delayedCall(500, () => AudioManager.play('laugh'));
     } else if (prop.type === 'cake') {
       this.frosting.explode(24, x, y);
       this.react('cake', from.x, from.y, 'yay');
@@ -853,7 +855,8 @@ export class GameScene extends Phaser.Scene {
     const res = this.damage.hit(-200, this.physTime);
     bus.emit('hud:damage', this.damage.total, res.value);
     this.popText(h.x, h.y - 50, h.kind === 'kadhai' ? 'Garam tel! -₹200' : 'Aag! -₹200', '#ff9a3c', 28);
-    this.react(h.kind === 'kadhai' ? 'kadhai' : 'fire', r.torso.position.x, r.torso.position.y, 'ouch', true);
+    this.react(h.kind === 'kadhai' ? 'kadhai' : 'fire', r.torso.position.x, r.torso.position.y, 'burn', true);
+    this.time.delayedCall(700, () => AudioManager.play('laugh'));
     this.recorder.mark(4);
   }
 
@@ -901,7 +904,8 @@ export class GameScene extends Phaser.Scene {
     const res = this.damage.hit(OBJ.vat.damage, this.physTime);
     bus.emit('hud:damage', this.damage.total, res.value);
     this.popText(t.x, t.y - 70, `Sticky! ${rupees(OBJ.vat.damage).replace('₹-', '-₹')}`, '#ffb347', 30);
-    this.react('vat', t.x, t.y - 40, 'ouch', true);
+    this.react('vat', t.x, t.y - 40, 'burn', true);
+    this.time.delayedCall(800, () => AudioManager.play('laugh'));
     this.recorder.mark(3);
   }
 

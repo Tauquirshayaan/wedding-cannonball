@@ -2,7 +2,7 @@
 import { GROUND_Y, PHYS, STEP_MS } from '../config';
 import type { LevelData, ObjDef } from './types';
 
-export const ENDLESS_BASE = 1000; // level ids >= this are endless rounds (id = base + round)
+export const ENDLESS_BASE = 100000; // level ids >= this are endless rounds (id = base + round)
 export const ENDLESS_UNLOCK_AFTER = 3; // clear this campaign level to unlock Endless
 
 /** Torso flight path from the cannon, identical to the game's physics (until it touches something). */
@@ -134,6 +134,15 @@ function build(round: number, r: () => number): LevelData {
     objects,
   };
 }
+
+/** Campaign levels 11+: the same generator with a fixed seed per level, so every player gets the same layout. */
+export function campaignLevel(id: number): LevelData {
+  const round = 2 + Math.floor((id - 11) / 25); // difficulty climbs slowly across ~1000 levels
+  const L = generateRound(round, id * 7777 + 13);
+  return { ...L, id, name: campaignName(id), tip: `Level ${id}`, damageTarget: Math.min(8000, 900 + round * 220) };
+}
+
+export function campaignName(id: number) { return NAMES[(id * 7) % NAMES.length]; }
 
 /** Builds round N of a run. Retries with new layouts until at least a few clean winning shots exist. */
 export function generateRound(round: number, runSeed: number): LevelData {

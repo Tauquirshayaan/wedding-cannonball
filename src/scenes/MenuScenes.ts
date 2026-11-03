@@ -8,7 +8,7 @@ import { AudioManager } from '../systems/AudioManager';
 import { Analytics } from '../systems/Analytics';
 import { rupees } from '../systems/DamageTracker';
 import { platform } from '../platform/Platform';
-import { LEVELS, EndlessRun } from '../levels';
+import { TOTAL_LEVELS, EndlessRun, levelName } from '../levels';
 import { ENDLESS_BASE, ENDLESS_UNLOCK_AFTER } from '../levels/endless';
 import type { ResultData } from './GameScene';
 
@@ -89,7 +89,7 @@ export class PreloadScene extends Phaser.Scene {
         // ?level=N jumps straight into a level (handy for phone testing)
         let jump = 0;
         try { jump = Number(new URLSearchParams(window.location.search).get('level')) || 0; } catch { /* ignore */ }
-        if (jump >= 1 && jump <= LEVELS.length) this.scene.start('Game', { levelId: jump });
+        if (jump >= 1 && jump <= TOTAL_LEVELS) this.scene.start('Game', { levelId: jump });
         else this.scene.start('Title');
       });
     });
@@ -139,16 +139,31 @@ export class TitleScene extends Phaser.Scene {
 // ---------------------------------------------------------------- Level select
 export class LevelSelectScene extends Phaser.Scene {
   constructor() { super('LevelSelect'); }
-  create() {
+  private page = -1;
+
+  create(data: { page?: number }) {
     backdrop(this, 0.45);
     platform.gameplayStop();
-    title(this, GAME_W / 2, 70, 'Choose a Function', 52);
-    this.add.text(GAME_W / 2, 122, `★ ${SaveManager.totalStars()} / ${LEVELS.length * 3}`, { fontFamily: FONT, fontSize: '26px', color: '#ffe9b8', fontStyle: 'bold' }).setOrigin(0.5);
-    const cw = 210, ch = 190, gap = 26;
+    title(this, GAME_W / 2, 62, 'Choose a Function', 50);
+    const pages = Math.ceil(TOTAL_LEVELS / 10);
+    // open on the page with the newest unlocked level
+    let latest = 1;
+    while (latest < TOTAL_LEVELS && SaveManager.isUnlocked(latest + 1)) latest++;
+    const page = Phaser.Math.Clamp(data?.page ?? (this.page >= 0 ? this.page : Math.floor((latest - 1) / 10)), 0, pages - 1);
+    this.page = page;
+    this.add.text(GAME_W / 2, 110, `★ ${SaveManager.totalStars()} / ${TOTAL_LEVELS * 3}   ·   Levels ${page * 10 + 1}–${Math.min(TOTAL_LEVELS, page * 10 + 10)} of ${TOTAL_LEVELS}`, { fontFamily: FONT, fontSize: '24px', color: '#ffe9b8', fontStyle: 'bold' }).setOrigin(0.5);
+    const go = (p: number) => this.scene.restart({ page: Phaser.Math.Clamp(p, 0, pages - 1) });
+    if (page > 0) new Button(this, 44, 375, '◀', () => go(page - 1), { w: 64, h: 110, size: 34, color: 0x7a1c2e });
+    if (page < pages - 1) new Button(this, GAME_W - 44, 375, '▶', () => go(page + 1), { w: 64, h: 110, size: 34, color: 0x7a1c2e });
+    if (page !== Math.floor((latest - 1) / 10)) new Button(this, GAME_W / 2 + 420, 110, 'Latest', () => go(Math.floor((latest - 1) / 10)), { w: 120, h: 44, size: 20, color: 0x3e9b3a });
+    this.input.keyboard?.on('keydown-LEFT', () => page > 0 && go(page - 1));
+    this.input.keyboard?.on('keydown-RIGHT', () => page < pages - 1 && go(page + 1));
+    const cw = 200, ch = 180, gap = 24;
     const x0 = GAME_W / 2 - (5 * cw + 4 * gap) / 2 + cw / 2;
-    LEVELS.forEach((L, i) => {
+    const ids = Array.from({ length: Math.min(10, TOTAL_LEVELS - page * 10) }, (_, i) => page * 10 + i + 1);
+    ids.map((id) => ({ id, name: levelName(id) })).forEach((L, i) => {
       const col = i % 5, row = Math.floor(i / 5);
-      const x = x0 + col * (cw + gap), y = 270 + row * (ch + 30);
+      const x = x0 + col * (cw + gap), y = 255 + row * (ch + 26);
       const unlocked = SaveManager.isUnlocked(L.id);
       const rec = SaveManager.level(L.id);
       const g = this.add.graphics();
@@ -157,7 +172,7 @@ export class LevelSelectScene extends Phaser.Scene {
       g.lineStyle(4, unlocked ? 0xf4c430 : 0x6a5f8a, 1); g.strokeRoundedRect(-cw / 2 + 7, -ch / 2 + 7, cw - 14, ch - 14, 16);
       g.lineStyle(4, 0x2a1420, 1); g.strokeRoundedRect(-cw / 2, -ch / 2, cw, ch, 22);
       const parts: Phaser.GameObjects.GameObject[] = [g];
-      parts.push(this.add.text(0, -54, `${L.id}`, { fontFamily: FONT, fontSize: '54px', color: unlocked ? '#f4c430' : '#8a80aa', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 7 }).setOrigin(0.5));
+      parts.push(this.add.text(0, -50, `${L.id}`, { fontFamily: FONT, fontSize: L.id >= 100 ? '44px' : '54px', color: unlocked ? '#f4c430' : '#8a80aa', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 7 }).setOrigin(0.5));
       parts.push(this.add.text(0, 26, themeFor(L.id).venue, { fontFamily: FONT, fontSize: '14px', color: '#ffe9b8' }).setOrigin(0.5));
       parts.push(this.add.text(0, -6, L.name, { fontFamily: FONT, fontSize: '21px', color: '#ffffff', fontStyle: 'bold', align: 'center', wordWrap: { width: cw - 24 } }).setOrigin(0.5));
       if (unlocked) {
@@ -305,7 +320,7 @@ export class ResultScene extends Phaser.Scene {
       this.add.text(GAME_W / 2, 400, 'Land Lucky on the stage within 3 launches.', { fontFamily: FONT, fontSize: '22px', color: '#ffffff' }).setOrigin(0.5);
     }
 
-    const hasNext = d.cleared && d.levelId < LEVELS.length;
+    const hasNext = d.cleared && d.levelId < TOTAL_LEVELS;
     const go = async (id: number) => {
       for (const b of buttons) b.setEnabled(false);
       AudioManager.setExternalMute(true);
@@ -317,8 +332,8 @@ export class ResultScene extends Phaser.Scene {
     const by = 530;
     buttons.push(new Button(this, GAME_W / 2 - (hasNext ? 160 : 0), by, '↻ Retry', () => { Analytics.track('retry', { level: d.levelId }); void go(d.levelId); }, { w: 260, h: 74, size: 32, color: hasNext ? 0xf7a21b : 0xe6197e }));
     if (hasNext) buttons.push(new Button(this, GAME_W / 2 + 160, by, 'Next ▶', () => void go(d.levelId + 1), { w: 260, h: 74, size: 32 }));
-    else if (d.cleared && d.levelId === LEVELS.length) {
-      this.add.text(GAME_W / 2, 476, 'You made the Grand Entry! Shaadi Mubarak!', { fontFamily: FONT, fontSize: '22px', color: '#7dff9a', fontStyle: 'bold' }).setOrigin(0.5);
+    else if (d.cleared && d.levelId === TOTAL_LEVELS) {
+      this.add.text(GAME_W / 2, 476, `All ${TOTAL_LEVELS} levels done! Shaadi Mubarak!`, { fontFamily: FONT, fontSize: '22px', color: '#7dff9a', fontStyle: 'bold' }).setOrigin(0.5);
     }
     buttons.push(new Button(this, GAME_W / 2 - 130, by + 92, 'Levels', () => { this.scene.stop('Hud'); this.scene.stop('Game'); this.scene.start('LevelSelect'); }, { w: 220, h: 60, size: 26, color: 0x7a1c2e }));
     const share = new Button(this, GAME_W / 2 + 130, by + 92, 'Share', () => void this.share(d, share), { w: 220, h: 60, size: 26, color: 0x3e9b3a });

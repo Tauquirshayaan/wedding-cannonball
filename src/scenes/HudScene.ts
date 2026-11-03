@@ -167,7 +167,7 @@ export class HudScene extends Phaser.Scene {
 
   private init2(level: LevelData, launches: number) {
     this.level = level;
-    const name = this.add.text(30, 30, level.id >= 1000 ? `Round ${level.id - 1000}: ${level.name}` : `${level.id}. ${level.name}`, { fontFamily: FONT, fontSize: '24px', color: '#ffffff', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 5 }).setOrigin(0, 0.5);
+    const name = this.add.text(30, 30, level.id >= 100000 ? `Round ${level.id - 100000}: ${level.name}` : `${level.id}. ${level.name}`, { fontFamily: FONT, fontSize: '24px', color: '#ffffff', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 5 }).setOrigin(0, 0.5);
     this.root.add(name);
     for (let i = 0; i < PHYS.launchesPerLevel; i++) {
       const ic = this.add.image(46 + i * 40, 62, 'cannon_icon').setScale(0.9);

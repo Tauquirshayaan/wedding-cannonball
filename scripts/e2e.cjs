@@ -73,6 +73,10 @@ async function winLevel(p, id) {
   // menus with real clicks
   await p.mouse.click(640, 400);
   check(await until(p, () => window.__hcGame.scene.isActive('LevelSelect')), 'PLAY opens level select');
+  check(await game(p, () => window.__hcGame.scene.getScene('LevelSelect').children.list.some((c) => c.text && /of 1002/.test(c.text))), 'level select shows 1002 levels');
+  await p.mouse.click(1236, 375); await p.waitForTimeout(300);
+  check(await game(p, () => window.__hcGame.scene.getScene('LevelSelect').children.list.some((c) => c.text && /Levels 11–20/.test(c.text))), 'page arrow shows levels 11–20');
+  await p.mouse.click(44, 375); await p.waitForTimeout(300);
   await p.mouse.click(185, 270);
   check(await until(p, () => window.__hcGame.scene.isActive('Game') && window.__hcGame.scene.isActive('Hud')), 'level 1 card starts the game with HUD');
   await p.keyboard.press('Space');
@@ -113,8 +117,20 @@ async function winLevel(p, id) {
     check(!!(r && r.cleared && r.stars >= 1 && r.score > 0), `level ${id} clearable (${w ? `${w.angle}° at ${Math.round(w.power * 100)}%` : 'no winning shot found'})${r ? `, ★${r.stars}, score ${r.score}` : ''}`);
   }
   check(await until(p, () => window.__hcGame.scene.isActive('Result')), 'result screen shows after a clear');
+  console.log('\n[generated campaign levels]');
+  for (const id of [11, 250, 500, 1002]) {
+    const w = await winLevel(p, id);
+    const r = w && w.result;
+    check(!!(r && r.cleared && r.levelId === id), `level ${id} generated and won with real physics${w ? ` (${w.angle}° at ${Math.round(w.power * 100)}%)` : ''}`);
+  }
+  const same = await game(p, async () => {
+    const g = window.__hcGame; const frame = () => new Promise((r) => requestAnimationFrame(r));
+    const snap = async () => { for (const k of ['Result']) if (g.scene.isActive(k)) g.scene.stop(k); g.scene.start('Game', { levelId: 777 }); await frame(); await frame(); return JSON.stringify(window.__hcScene.level); };
+    const a = await snap(); const b = await snap(); return a === b;
+  });
+  check(same, 'a generated level is identical every time it loads (level 777)');
   const saved = await game(p, () => JSON.parse(localStorage.getItem('hc_wedding_save_v1') || '{}'));
-  check(saved.levels && Object.keys(saved.levels).length === 10 && saved.levels[10].cleared, 'progress saved for all 10 levels');
+  check(saved.levels && [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].every((i) => saved.levels[i] && saved.levels[i].cleared), 'progress saved for levels 1–10');
 
   // endless baraat
   console.log('\n[endless baraat]');
@@ -130,7 +146,7 @@ async function winLevel(p, id) {
       for (const a of [40, 35, 45, 30, 50, 55, 25, 60, 20, 65, 70]) for (let pw = 1; pw >= 0.3; pw -= 0.05) {
         for (const k of ['Result', 'Pause']) if (g.scene.isActive(k)) g.scene.stop(k);
         window.__hcResult = null;
-        g.scene.start('Game', { levelId: 1000 + round, run: { seed, round, damage: runDamage } });
+        g.scene.start('Game', { levelId: 100000 + round, run: { seed, round, damage: runDamage } });
         await frame(); await frame();
         const s = window.__hcScene; s.testSteps = 120; s.testLaunch(a, +pw.toFixed(2));
         let n = 0; while (s.state === 'flight' && n++ < 400) await frame();
@@ -149,7 +165,7 @@ async function winLevel(p, id) {
     const g = window.__hcGame; const frame = () => new Promise((r) => requestAnimationFrame(r));
     for (const k of ['Result', 'Pause']) if (g.scene.isActive(k)) g.scene.stop(k);
     window.__hcResult = null;
-    g.scene.start('Game', { levelId: 1007, run: { seed, round: 7, damage: 1000 } });
+    g.scene.start('Game', { levelId: 100007, run: { seed, round: 7, damage: 1000 } });
     await frame(); await frame();
     const s = window.__hcScene; s.testSteps = 120;
     // fire three tiny shots that cannot reach the stage
