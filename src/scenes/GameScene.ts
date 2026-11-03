@@ -21,7 +21,7 @@ import { platform } from '../platform/Platform';
 type State = 'intro' | 'aim' | 'flight' | 'between' | 'offer' | 'ending' | 'replay' | 'done';
 
 export interface ResultData {
-  levelId: number; name: string; unlock?: string; daily?: { date: number; launches: number; streak: number; best: boolean }; run?: EndlessRun | null; recordRun?: boolean; cleared: boolean; stars: number; damage: number; score: number; launchesLeft: number;
+  levelId: number; name: string; starFlags?: [boolean, boolean, boolean]; unlock?: string; daily?: { date: number; launches: number; streak: number; best: boolean }; run?: EndlessRun | null; recordRun?: boolean; cleared: boolean; stars: number; damage: number; score: number; launchesLeft: number;
   gift: boolean; newBest: boolean; badge: string | null; target: number; hasGift: boolean;
 }
 
@@ -485,9 +485,9 @@ export class GameScene extends Phaser.Scene {
     r.setFace('happy');
     const gift = !!this.world.gift?.collected;
     const launchesUsed = PHYS.launchesPerLevel - this.launchesLeft;
-    let stars = 1;
-    if (this.damage.total >= L.damageTarget) stars++;
-    if (L.gift ? gift : launchesUsed === 1) stars++;
+    // three independent stars: landed, damage target, gift (or a 1-launch clear when there is no gift)
+    const starFlags: [boolean, boolean, boolean] = [true, this.damage.total >= L.damageTarget, L.gift ? gift : launchesUsed === 1];
+    const stars = starFlags.filter(Boolean).length;
     const score = this.damage.total + 1000 * this.launchesLeft + (gift ? 500 : 0);
     let badge: string | null = null;
     if (this.damage.total < 500) badge = 'Shareef Guest';
@@ -514,7 +514,7 @@ export class GameScene extends Phaser.Scene {
     const run = this.run ? { ...this.run, damage: this.run.damage + this.damage.total } : null;
     if (run) { SaveManager.recordEndless(run.round, run.damage); Analytics.track('endless_round_clear', { round: run.round }); }
     const unlock = !run ? OUTFITS.find((o) => o.level === L.id)?.name : undefined;
-    const data: ResultData = { levelId: L.id, name: L.name, unlock, daily, run, cleared: true, stars, damage: this.damage.total, score, launchesLeft: this.launchesLeft, gift, newBest, badge, target: L.damageTarget, hasGift: !!L.gift };
+    const data: ResultData = { levelId: L.id, name: L.name, starFlags, unlock, daily, run, cleared: true, stars, damage: this.damage.total, score, launchesLeft: this.launchesLeft, gift, newBest, badge, target: L.damageTarget, hasGift: !!L.gift };
     this.time.delayedCall(this.testSteps ? 10 : 1300, () => this.startReplay(() => this.showResult(data)));
   }
 

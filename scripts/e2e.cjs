@@ -117,6 +117,21 @@ async function winLevel(p, id) {
     check(!!(r && r.cleared && r.stars >= 1 && r.score > 0), `level ${id} clearable (${w ? `${w.angle}° at ${Math.round(w.power * 100)}%` : 'no winning shot found'})${r ? `, ★${r.stars}, score ${r.score}` : ''}`);
   }
   check(await until(p, () => window.__hcGame.scene.isActive('Result')), 'result screen shows after a clear');
+  const starLogic = await game(p, async () => {
+    // force each combination and check the result screen lights exactly the earned stars
+    const g = window.__hcGame; const f = () => new Promise((r) => requestAnimationFrame(r));
+    const out = [];
+    for (const flags of [[true, false, true], [true, true, false], [true, false, false]]) {
+      if (g.scene.isActive('Result')) g.scene.stop('Result');
+      g.scene.start('Result', { levelId: 2, name: 'Test', cleared: true, stars: flags.filter(Boolean).length, starFlags: flags, damage: 500, score: 1500, launchesLeft: 1, gift: flags[2], newBest: false, badge: null, target: 900, hasGift: true });
+      for (let i = 0; i < 90; i++) await f();
+      const full = g.scene.getScene('Result').children.list.filter((c) => c.texture && c.texture.key === 'star_full').map((c) => Math.round(c.x));
+      out.push(JSON.stringify(full.map((x) => x === 510 ? 0 : x === 640 ? 1 : 2)) === JSON.stringify(flags.map((v, i) => (v ? i : -1)).filter((i) => i >= 0)));
+    }
+    g.scene.stop('Result');
+    return out.every(Boolean);
+  });
+  check(starLogic, 'result screen lights exactly the stars earned (gift star without the damage star, and so on)');
   console.log('\n[generated campaign levels]');
   for (const id of [11, 250, 500, 1002]) {
     const w = await winLevel(p, id);

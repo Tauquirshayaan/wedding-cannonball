@@ -304,8 +304,12 @@ export class ResultScene extends Phaser.Scene {
     for (let i = 0; i < 3; i++) {
       const x = GAME_W / 2 + (i - 1) * 130;
       const s = this.add.image(x, 225, 'star_empty').setScale(1.15);
-      this.add.text(x, 282, labels[i], { fontFamily: FONT, fontSize: '16px', color: '#ffe9b8', align: 'center', wordWrap: { width: 120 } }).setOrigin(0.5, 0);
-      if (i < d.stars) {
+      const earned = d.starFlags ? d.starFlags[i] : i < d.stars;
+      let label = labels[i];
+      if (d.cleared && !earned && i === 1) label = `${rupees(d.damage)} / ${rupees(d.target)} damage`;
+      if (d.cleared && !earned && i === 2 && d.hasGift) label = 'Gift missed';
+      this.add.text(x, 282, d.cleared ? `${earned ? '✓ ' : ''}${label}` : label, { fontFamily: FONT, fontSize: '16px', color: d.cleared ? (earned ? '#7dff9a' : '#ffb3b3') : '#ffe9b8', align: 'center', wordWrap: { width: 124 }, fontStyle: 'bold' }).setOrigin(0.5, 0);
+      if (earned) {
         const f = this.add.image(x, 225, 'star_full').setScale(0);
         this.tweens.add({ targets: f, scale: 1.15, delay: 300 + i * 320, duration: 300, ease: 'Back.out', onStart: () => AudioManager.play('star', 1 + i * 0.12) });
         void s;

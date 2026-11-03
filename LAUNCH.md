@@ -37,7 +37,7 @@ npm run build:all       # writes release/human-cannonball-<portal>.zip
 
 ## Automated audit
 
-`npm run build:all && npm run test:e2e` runs 94 checks in headless Chromium:
+`npm run build:all && npm run test:e2e` runs 95 checks in headless Chromium:
 - menus, aiming, flail, cancel, pause and resume, restart, and pause on tab switch
 - a winning shot on all 10 levels, plus saving and reload
 - recovery from a tampered save
