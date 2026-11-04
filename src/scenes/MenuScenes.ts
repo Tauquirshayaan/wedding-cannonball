@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { GAME_W, GAME_H, GROUND_Y, FONT } from '../config';
 import { generateCoreTextures } from '../art/Textures';
 import { makeAllOutfits, themeFor, OUTFITS, outfitUnlocked } from '../art/Themes';
-import { Button, panel, title } from '../ui/Button';
+import { Button, panel, title, closeButton, fullscreenButton } from '../ui/Button';
+import { centerSafeArea, dimmer, isTouchDevice, enterFullscreen } from '../ui/Layout';
 import { SaveManager } from '../systems/SaveManager';
 import { AudioManager } from '../systems/AudioManager';
 import { Analytics } from '../systems/Analytics';
@@ -22,11 +23,13 @@ const TIPS = [
 ];
 
 function backdrop(scene: Phaser.Scene, dim = 0) {
-  scene.add.image(GAME_W / 2, GAME_H / 2, 'sky').setScale(2);
-  scene.add.tileSprite(0, GROUND_Y - 290, GAME_W, 300, 'bg_far').setOrigin(0);
-  scene.add.tileSprite(0, GROUND_Y - 320, GAME_W, 330, 'bg_near').setOrigin(0);
-  scene.add.tileSprite(0, GROUND_Y - 11, GAME_W, 120, 'ground').setOrigin(0);
-  if (dim) scene.add.rectangle(0, 0, GAME_W, GAME_H, 0x0e1a40, dim).setOrigin(0);
+  // drawn well beyond the 1280×720 safe area so wide and tall screens are fully covered
+  scene.add.image(GAME_W / 2, GAME_H / 2, 'sky').setScale(6);
+  scene.add.tileSprite(-2000, GROUND_Y - 290, GAME_W + 4000, 300, 'bg_far').setOrigin(0);
+  scene.add.tileSprite(-2000, GROUND_Y - 320, GAME_W + 4000, 330, 'bg_near').setOrigin(0);
+  scene.add.tileSprite(-2000, GROUND_Y - 11, GAME_W + 4000, 120, 'ground').setOrigin(0);
+  scene.add.rectangle(-2000, GROUND_Y + 108, GAME_W + 4000, 2000, 0x245e2a).setOrigin(0);
+  if (dim) scene.add.rectangle(-3000, -3000, GAME_W + 6000, GAME_H + 6000, 0x0e1a40, dim).setOrigin(0);
 }
 
 function soundToggle(scene: Phaser.Scene, x: number, y: number) {
@@ -62,6 +65,7 @@ function soundToggle(scene: Phaser.Scene, x: number, y: number) {
 export class PreloadScene extends Phaser.Scene {
   constructor() { super('Preload'); }
   create() {
+    centerSafeArea(this);
     this.cameras.main.setBackgroundColor('#0e1a40');
     const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
     title(this, GAME_W / 2, 250, 'Human Cannonball', 64);
@@ -100,6 +104,7 @@ export class PreloadScene extends Phaser.Scene {
 export class TitleScene extends Phaser.Scene {
   constructor() { super('Title'); }
   create() {
+    centerSafeArea(this);
     backdrop(this);
     AudioManager.startMusic();
     platform.gameplayStop();
@@ -129,6 +134,8 @@ export class TitleScene extends Phaser.Scene {
     new Button(this, GAME_W / 2 - 120, 500, 'Wardrobe', () => this.scene.start('Wardrobe', { from: 'Title' }), { w: 220, h: 60, size: 26, color: 0x3e9b3a });
     new Button(this, GAME_W / 2 + 120, 500, 'Settings', () => { this.scene.pause(); this.scene.launch('Settings', { from: 'Title' }); }, { w: 220, h: 60, size: 26, color: 0x7a1c2e });
     soundToggle(this, GAME_W - 56, 56);
+    fullscreenButton(this, GAME_W - 136, 56);
+    if (platform.name === 'web' && isTouchDevice()) this.input.once('pointerup', () => enterFullscreen(this));
     const stars = SaveManager.totalStars();
     if (stars > 0) this.add.text(56, 56, `★ ${stars}/30`, { fontFamily: FONT, fontSize: '28px', color: '#f4c430', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 6 }).setOrigin(0, 0.5);
     this.input.keyboard?.once('keydown-SPACE', () => this.scene.start('LevelSelect'));
@@ -142,6 +149,7 @@ export class LevelSelectScene extends Phaser.Scene {
   private page = -1;
 
   create(data: { page?: number }) {
+    centerSafeArea(this);
     backdrop(this, 0.45);
     platform.gameplayStop();
     title(this, GAME_W / 2, 62, 'Choose a Function', 50);
@@ -203,6 +211,8 @@ export class LevelSelectScene extends Phaser.Scene {
     if (!endlessOpen) daily.setEnabled(false);
     if (endlessOpen && dd.streak > 0) this.add.text(GAME_W / 2 + 300, 616, `🔥 ${dd.streak}-day streak${doneToday ? ` · best ${dd.launches}/3` : ''}`, { fontFamily: FONT, fontSize: '16px', color: '#ffe9b8', fontStyle: 'bold' }).setOrigin(0.5);
     new Button(this, GAME_W - 190, 56, 'Wardrobe', () => this.scene.start('Wardrobe', { from: 'LevelSelect' }), { w: 180, h: 56, size: 22, color: 0x3e9b3a });
+    closeButton(this, 50, 56, () => this.scene.start('Title'));
+    fullscreenButton(this, 130, 56);
     soundToggle(this, GAME_W - 56, 56);
     this.input.keyboard?.once('keydown-ESC', () => this.scene.start('Title'));
   }
@@ -222,7 +232,8 @@ export function newEndlessRun(scene: Phaser.Scene) {
 export class PauseScene extends Phaser.Scene {
   constructor() { super('Pause'); }
   create(data: { levelId: number; run?: EndlessRun | null; name: string }) {
-    this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.55).setOrigin(0).setInteractive();
+    centerSafeArea(this);
+    dimmer(this, 0.55);
     panel(this, GAME_W / 2, GAME_H / 2, 520, 470);
     const L = { id: data.levelId, name: data.name };
     const run = data.run ?? null;
@@ -232,7 +243,9 @@ export class PauseScene extends Phaser.Scene {
     new Button(this, GAME_W / 2, 310, 'Resume', resume, { w: 300, h: 70, size: 32 });
     new Button(this, GAME_W / 2, 395, 'Restart', () => { Analytics.track('retry', { level: L.id }); this.scene.stop(); startLevel(this, L.id, run); }, { w: 300, h: 64, size: 28, color: 0xf7a21b });
     new Button(this, GAME_W / 2, 475, 'Levels', () => { this.scene.stop('Hud'); this.scene.stop('Game'); this.scene.start('LevelSelect'); }, { w: 300, h: 64, size: 28, color: 0x7a1c2e });
-    soundToggle(this, GAME_W / 2 + 200, 175);
+    soundToggle(this, GAME_W / 2 - 200, 175);
+    fullscreenButton(this, GAME_W / 2 - 200, 255);
+    closeButton(this, GAME_W / 2 + 226, 159, resume);
     this.input.keyboard?.once('keydown-ESC', resume);
     this.input.keyboard?.once('keydown-P', resume);
   }
@@ -242,9 +255,17 @@ export class PauseScene extends Phaser.Scene {
 export class SettingsScene extends Phaser.Scene {
   constructor() { super('Settings'); }
   create(data: { from: string }) {
-    this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.6).setOrigin(0).setInteractive();
+    centerSafeArea(this);
+    dimmer(this, 0.6);
     panel(this, GAME_W / 2, GAME_H / 2, 620, 540);
     title(this, GAME_W / 2, 140, 'Settings', 52);
+    const closeSettings = () => {
+      SaveManager.persist();
+      this.scene.stop();
+      if (data.from === 'Title') this.scene.start('Title'); else this.scene.resume(data.from);
+    };
+    closeButton(this, GAME_W / 2 + 276, 124, closeSettings);
+    this.input.keyboard?.once('keydown-ESC', closeSettings);
     this.slider(195, 'Sound effects', SaveManager.data.sfx, (v) => { SaveManager.data.sfx = v; AudioManager.setSfx(v); AudioManager.play('pop'); });
     this.slider(270, 'Music', SaveManager.data.music, (v) => { SaveManager.data.music = v; AudioManager.setMusic(v); });
     const toggle = (x: number, y: number, w: number, label: string, key: 'voice' | 'haptics' | 'lowfx', color: number) => {
@@ -282,7 +303,7 @@ export class SettingsScene extends Phaser.Scene {
     const set = (px: number) => { knob.x = Phaser.Math.Clamp(px, x0, x0 + w); draw(); onChange((knob.x - x0) / w); };
     knob.on('drag', (_p: Phaser.Input.Pointer, dx: number) => set(dx));
     const hit = this.add.rectangle(x0 + w / 2, y + 24, w + 40, 60, 0, 0).setInteractive();
-    hit.on('pointerdown', (p: Phaser.Input.Pointer) => set(p.x));
+    hit.on('pointerdown', (p: Phaser.Input.Pointer) => set(p.worldX));
     this.children.bringToTop(knob);
   }
 }
@@ -291,10 +312,11 @@ export class SettingsScene extends Phaser.Scene {
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
   create(d: ResultData) {
+    centerSafeArea(this);
     if (d.run) { this.endless(d); return; }
     if (d.daily) { this.dailyResult(d); return; }
     const L = { id: d.levelId, name: d.name };
-    this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.5).setOrigin(0).setInteractive();
+    dimmer(this, 0.5);
     panel(this, GAME_W / 2, GAME_H / 2, 700, 620, d.cleared ? 0x7a1c2e : 0x3a2f5a);
     title(this, GAME_W / 2, 92, d.cleared ? 'Pahunch Gaye!' : 'Shaadi Miss Ho Gayi!', 52, d.cleared ? '#f4c430' : '#ff9ad0');
     this.add.text(GAME_W / 2, 146, `${L.id}. ${L.name}`, { fontFamily: FONT, fontSize: '24px', color: '#ffe9b8' }).setOrigin(0.5);
@@ -364,7 +386,7 @@ export class ResultScene extends Phaser.Scene {
   /** Result screen for the Daily Challenge. */
   private dailyResult(d: ResultData) {
     const dl = d.daily!;
-    this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.5).setOrigin(0).setInteractive();
+    dimmer(this, 0.5);
     panel(this, GAME_W / 2, GAME_H / 2, 700, 620, d.cleared ? 0x7a1c2e : 0x3a2f5a);
     title(this, GAME_W / 2, 100, d.cleared ? 'Daily Cleared!' : 'Not Today… Yet!', 52, d.cleared ? '#f4c430' : '#ff9ad0');
     this.add.text(GAME_W / 2, 156, d.name, { fontFamily: FONT, fontSize: '24px', color: '#ffe9b8' }).setOrigin(0.5);
@@ -394,7 +416,7 @@ export class ResultScene extends Phaser.Scene {
   /** Result screen for an Endless Baraat round. */
   private endless(d: ResultData) {
     const run = d.run!;
-    this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.5).setOrigin(0).setInteractive();
+    dimmer(this, 0.5);
     panel(this, GAME_W / 2, GAME_H / 2, 700, 620, d.cleared ? 0x7a1c2e : 0x3a2f5a);
     title(this, GAME_W / 2, 100, d.cleared ? `Round ${run.round} Cleared!` : 'Run Over!', 52, d.cleared ? '#f4c430' : '#ff9ad0');
     this.add.text(GAME_W / 2, 156, `Endless Baraat · ${d.name}`, { fontFamily: FONT, fontSize: '24px', color: '#ffe9b8' }).setOrigin(0.5);
@@ -463,6 +485,7 @@ export class ResultScene extends Phaser.Scene {
 export class WardrobeScene extends Phaser.Scene {
   constructor() { super('Wardrobe'); }
   create(data: { from: string }) {
+    centerSafeArea(this);
     backdrop(this, 0.55);
     title(this, GAME_W / 2, 60, "Lucky's Wardrobe", 50);
     const stars = SaveManager.totalStars();
@@ -510,6 +533,7 @@ export class WardrobeScene extends Phaser.Scene {
     });
     draw();
     new Button(this, 110, 660, '◀ Back', () => this.scene.start(data.from === 'LevelSelect' ? 'LevelSelect' : 'Title'), { w: 170, h: 60, size: 26, color: 0x7a1c2e });
+    closeButton(this, GAME_W - 50, 56, () => this.scene.start(data.from === 'LevelSelect' ? 'LevelSelect' : 'Title'));
     this.input.keyboard?.once('keydown-ESC', () => this.scene.start(data.from === 'LevelSelect' ? 'LevelSelect' : 'Title'));
   }
 }

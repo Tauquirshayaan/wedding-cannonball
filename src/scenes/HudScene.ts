@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { GAME_W, FONT, PHYS } from '../config';
 import { bus } from '../systems/bus';
-import { Button } from '../ui/Button';
+import { Button, closeButton } from '../ui/Button';
+import { centerSafeArea, dimmer, isTouchDevice } from '../ui/Layout';
 import { rupees } from '../systems/DamageTracker';
 import type { LevelData } from '../levels/types';
 
@@ -23,6 +24,7 @@ export class HudScene extends Phaser.Scene {
   constructor() { super('Hud'); }
 
   create() {
+    centerSafeArea(this);
     this.icons = []; this.gift = null; this.dmgShown = 0; this.dmgTarget = 0;
     this.root = this.add.container(0, 0);
     // top bar
@@ -43,10 +45,12 @@ export class HudScene extends Phaser.Scene {
       g.fillStyle(0xe6197e, 1); g.fillRoundedRect(-30, -30, 60, 60, 16);
       g.lineStyle(3, 0x2a1420, 1); g.strokeRoundedRect(-30, -30, 60, 60, 16);
       draw(g);
-      const c = this.add.container(x, 46, [g]).setSize(64, 64).setInteractive({ useHandCursor: true });
-      c.on('pointerdown', (_p: unknown, _x: unknown, _y: unknown, ev: Phaser.Types.Input.EventData) => { ev.stopPropagation(); c.setScale(0.9); });
-      c.on('pointerout', () => c.setScale(1));
-      c.on('pointerup', (_p: unknown, _x: unknown, _y: unknown, ev: Phaser.Types.Input.EventData) => { ev.stopPropagation(); c.setScale(1); cb(); });
+      // bigger on phones: the safe area is scaled down on short screens, so keep thumb-sized targets
+      const big = isTouchDevice() ? 1.35 : 1;
+      const c = this.add.container(x - (big - 1) * 30, 46 + (big - 1) * 20, [g]).setSize(64, 64).setScale(big).setInteractive({ useHandCursor: true });
+      c.on('pointerdown', (_p: unknown, _x: unknown, _y: unknown, ev: Phaser.Types.Input.EventData) => { ev.stopPropagation(); c.setScale(big * 0.9); });
+      c.on('pointerout', () => c.setScale(big));
+      c.on('pointerup', (_p: unknown, _x: unknown, _y: unknown, ev: Phaser.Types.Input.EventData) => { ev.stopPropagation(); c.setScale(big); cb(); });
       this.root.add(c);
     };
     mk(GAME_W - 46, (g) => { g.fillStyle(0xffffff, 1); g.fillRect(-11, -13, 8, 26); g.fillRect(3, -13, 8, 26); }, () => bus.emit('hud:pause'));
@@ -96,7 +100,7 @@ export class HudScene extends Phaser.Scene {
     on('hud:flail', () => this.flailHint.setAlpha(0));
     on('hud:hide', () => this.root.setVisible(false));
     on('hud:offer', () => {
-      const dim = this.add.rectangle(0, 0, GAME_W, 720, 0x000000, 0.45).setOrigin(0).setInteractive();
+      const dim = dimmer(this, 0.45);
       const g = this.add.graphics();
       g.fillStyle(0x2a1420, 1); g.fillRoundedRect(GAME_W / 2 - 300, 214, 600, 300, 28);
       g.fillStyle(0x7a1c2e, 1); g.fillRoundedRect(GAME_W / 2 - 300, 206, 600, 300, 28);
@@ -107,6 +111,7 @@ export class HudScene extends Phaser.Scene {
       const close = () => items.forEach((o) => o.destroy());
       items.push(new Button(this, GAME_W / 2, 390, '▶ +1 Launch', () => { close(); bus.emit('offer:accept'); }, { w: 320, h: 70, size: 30, color: 0x3e9b3a }));
       items.push(new Button(this, GAME_W / 2, 462, 'No thanks', () => { close(); bus.emit('offer:decline'); }, { w: 220, h: 50, size: 22, color: 0x5a1020 }));
+      items.push(closeButton(this, GAME_W / 2 + 266, 240, () => { close(); bus.emit('offer:decline'); }));
     });
     on('hud:boss', () => {
       const g = this.add.graphics();
@@ -142,12 +147,15 @@ export class HudScene extends Phaser.Scene {
     on('hud:aim', (d: { sx: number; sy: number; px: number; py: number; valid: boolean; angle: number; power: number } | null) => {
       aimG.clear();
       if (!d) { aimTxt.setVisible(false); return; }
+      // pointer positions arrive in screen pixels; the HUD camera is scrolled to centre the safe area
+      const cam = this.cameras.main;
+      d = { ...d, sx: d.sx + cam.scrollX, sy: d.sy + cam.scrollY, px: d.px + cam.scrollX, py: d.py + cam.scrollY };
       aimG.lineStyle(3, 0xffffff, 0.55); aimG.strokeCircle(d.sx, d.sy, 24);
       aimG.lineStyle(5, 0xffffff, 0.35); aimG.lineBetween(d.sx, d.sy, d.px, d.py);
       aimG.fillStyle(d.valid ? 0xf4c430 : 0xffffff, 0.85); aimG.fillCircle(d.px, d.py, 12);
       aimTxt.setVisible(true).setPosition(d.px, d.py + 34).setText(d.valid ? `${Math.round(d.angle)}°  ·  ${Math.round(d.power * 100)}%` : 'Release to cancel');
     });
-    const flash = this.add.rectangle(0, 0, GAME_W, 720, 0xffffff, 0).setOrigin(0);
+    const flash = this.add.rectangle(-3000, -3000, GAME_W + 6000, 720 + 6000, 0xffffff, 0).setOrigin(0);
     on('hud:flash', () => { flash.setAlpha(0.85); this.tweens.add({ targets: flash, alpha: 0, duration: 260 }); });
     let tut: Phaser.GameObjects.Container | null = null;
     on('hud:tutorial', (show: boolean) => {
@@ -176,8 +184,8 @@ export class HudScene extends Phaser.Scene {
     let replayUi: Phaser.GameObjects.Container | null = null;
     on('hud:replay', (total: number) => {
       this.root.setVisible(false);
-      const bar1 = this.add.rectangle(0, 0, GAME_W, 70, 0x000000, 0.85).setOrigin(0);
-      const bar2 = this.add.rectangle(0, 650, GAME_W, 70, 0x000000, 0.85).setOrigin(0);
+      const bar1 = this.add.rectangle(-3000, -3000, GAME_W + 6000, 3070, 0x000000, 0.85).setOrigin(0);
+      const bar2 = this.add.rectangle(-3000, 650, GAME_W + 6000, 3070, 0x000000, 0.85).setOrigin(0);
       const label = this.add.text(40, 35, '● REPLAY  x0.35', { fontFamily: FONT, fontSize: '28px', color: '#ff4d6d', fontStyle: 'bold' }).setOrigin(0, 0.5);
       const hint = this.add.text(GAME_W - 40, 685, 'Tap to skip', { fontFamily: FONT, fontSize: '22px', color: '#ffffff' }).setOrigin(1, 0.5);
       const dmg = this.add.text(GAME_W / 2, 685, `Shaadi Damage ${rupees(total)}`, { fontFamily: FONT, fontSize: '26px', color: '#f4c430', fontStyle: 'bold' }).setOrigin(0.5);

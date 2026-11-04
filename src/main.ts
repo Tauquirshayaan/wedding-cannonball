@@ -24,7 +24,8 @@ async function boot() {
     width: GAME_W,
     height: GAME_H,
     backgroundColor: '#0e1a40',
-    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+    // EXPAND: fill the whole screen at any aspect ratio (no black bars); 1280×720 is the minimum visible area
+    scale: { mode: Phaser.Scale.EXPAND, autoCenter: Phaser.Scale.CENTER_BOTH, width: GAME_W, height: GAME_H },
     input: { activePointers: 2 },
     render: { antialias: true, powerPreference: 'high-performance' },
     fps: { target: 60 },
@@ -32,6 +33,14 @@ async function boot() {
     scene: [PreloadScene, TitleScene, LevelSelectScene, GameScene, HudScene, PauseScene, SettingsScene, ResultScene, WardrobeScene],
   });
   (window as unknown as { __hcGame: Phaser.Game }).__hcGame = game;
+
+  // Mobile browsers often report the old size right after a rotation or when the toolbar hides:
+  // re-measure a few times so the canvas always fills the screen.
+  const refit = () => [50, 250, 600].forEach((ms) => setTimeout(() => game.scale.refresh(), ms));
+  window.addEventListener('orientationchange', refit);
+  window.addEventListener('resize', refit);
+  window.visualViewport?.addEventListener('resize', refit);
+  document.addEventListener('fullscreenchange', refit);
 
   // Tab switching: pause and mute.
   document.addEventListener('visibilitychange', () => AudioManager.setHidden(document.hidden));

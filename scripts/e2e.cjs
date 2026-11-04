@@ -319,6 +319,52 @@ async function winLevel(p, id) {
   check(await until(p, () => window.__hcGame.scene.isActive('Game')), 'plays from a file');
   check(errs.length === 0, `no console errors${errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''}`);
 
+  // ---------------------------------------------------------------- responsive / full screen
+  console.log('\n[screens and devices]');
+  const resp = await serve(path.join(DIST, 'web'));
+  for (const [name, w, h, touch] of [['phone landscape 844×390', 844, 390, true], ['tablet 1180×820', 1180, 820, true], ['ultrawide 2560×1080', 2560, 1080, false]]) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h }, isMobile: touch, hasTouch: touch });
+    const pg = await ctx.newPage();
+    const perr = []; pg.on('pageerror', (e) => perr.push(e.message));
+    await pg.goto(resp.url);
+    await until(pg, () => window.__hcGame && window.__hcGame.scene.isActive('Title'));
+    await pg.waitForTimeout(300);
+    const fill = await pg.evaluate(() => { const c = document.querySelector('#game canvas').getBoundingClientRect(); return [Math.round(c.x), Math.round(c.y), Math.round(c.width), Math.round(c.height)]; });
+    check(fill[0] === 0 && fill[1] === 0 && fill[2] === w && fill[3] === h && perr.length === 0, `${name}: game fills the whole screen, no black bars (canvas ${fill[2]}×${fill[3]})`);
+    await ctx.close();
+  }
+  {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    const pg = await ctx.newPage();
+    await pg.goto(resp.url);
+    await until(pg, () => window.__hcGame && window.__hcGame.scene.isActive('Title'));
+    const prompt = await pg.evaluate(() => getComputedStyle(document.getElementById('rotate')).display !== 'none');
+    await pg.setViewportSize({ width: 844, height: 390 });
+    await pg.waitForTimeout(900);
+    const after = await pg.evaluate(() => { const c = document.querySelector('#game canvas').getBoundingClientRect(); return [Math.round(c.width), Math.round(c.height), getComputedStyle(document.getElementById('rotate')).display]; });
+    check(prompt && after[0] === 844 && after[1] === 390 && after[2] === 'none', `phone rotated portrait → landscape refills the screen (${after[0]}×${after[1]})`);
+    await ctx.close();
+  }
+  {
+    // ✕ close buttons (1280×720 so the safe area has no offset)
+    const pg = await newPage(browser, []);
+    await pg.goto(resp.url);
+    await until(pg, () => window.__hcGame && window.__hcGame.scene.isActive('Title'));
+    await game(pg, () => { const t = window.__hcGame.scene.getScene('Title'); t.scene.pause(); t.scene.launch('Settings', { from: 'Title' }); });
+    await pg.waitForTimeout(400); await pg.mouse.click(640 + 276, 124);
+    check(await until(pg, () => !window.__hcGame.scene.isActive('Settings') && window.__hcGame.scene.isActive('Title'), null, 5000), 'Settings ✕ closes Settings');
+    await game(pg, () => window.__hcGame.scene.getScene('Title').scene.start('Wardrobe', { from: 'Title' }));
+    await pg.waitForTimeout(400); await pg.mouse.click(1230, 56);
+    check(await until(pg, () => !window.__hcGame.scene.isActive('Wardrobe'), null, 5000), 'Wardrobe ✕ closes the Wardrobe');
+    await game(pg, () => { const g = window.__hcGame; for (const k of ['Title', 'Wardrobe']) if (g.scene.isActive(k)) g.scene.stop(k); g.scene.start('Game', { levelId: 1 }); });
+    await pg.waitForTimeout(400); await pg.keyboard.press('Space'); await until(pg, () => window.__hcScene.state === 'aim', null, 8000);
+    await pg.keyboard.press('Escape'); await until(pg, () => window.__hcGame.scene.isActive('Pause'), null, 5000);
+    await pg.waitForTimeout(300); await pg.mouse.click(640 + 226, 159);
+    check(await until(pg, () => !window.__hcGame.scene.isActive('Pause') && !window.__hcGame.scene.isPaused('Game'), null, 5000), 'Pause ✕ resumes the game');
+    await pg.close();
+  }
+  resp.close();
+
   await browser.close();
   console.log(`\n${passes} passed, ${failures} failed`);
   process.exit(failures ? 1 : 0);

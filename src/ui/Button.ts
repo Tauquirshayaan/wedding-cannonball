@@ -73,3 +73,47 @@ export function title(scene: Phaser.Scene, x: number, y: number, text: string, s
     align: 'center',
   }).setOrigin(0.5);
 }
+
+/** Round ✕ close button (56 px touch target) for overlays and menus. */
+export function closeButton(scene: Phaser.Scene, x: number, y: number, onClose: () => void) {
+  const g = scene.add.graphics();
+  g.fillStyle(0x2a1420, 1); g.fillCircle(0, 4, 28);
+  g.fillStyle(0xe6197e, 1); g.fillCircle(0, 0, 28);
+  g.lineStyle(3, 0x2a1420, 1); g.strokeCircle(0, 0, 28);
+  g.lineStyle(6, 0xffffff, 1);
+  g.lineBetween(-10, -10, 10, 10); g.lineBetween(10, -10, -10, 10);
+  const big = (() => { try { return window.matchMedia('(pointer: coarse)').matches ? 1.3 : 1; } catch { return 1; } })();
+  const c = scene.add.container(x, y, [g]).setSize(64, 64).setScale(big).setInteractive({ useHandCursor: true }).setDepth(1000);
+  c.on('pointerdown', (_p: unknown, _x: unknown, _y: unknown, ev: Phaser.Types.Input.EventData) => { ev?.stopPropagation?.(); c.setScale(big * 0.9); });
+  c.on('pointerout', () => c.setScale(big));
+  c.on('pointerup', (_p: unknown, _x: unknown, _y: unknown, ev: Phaser.Types.Input.EventData) => { ev?.stopPropagation?.(); c.setScale(big); AudioManager.play('pop'); onClose(); });
+  return c;
+}
+
+/** ⛶ full-screen toggle, shown only where the browser supports it. */
+export function fullscreenButton(scene: Phaser.Scene, x: number, y: number) {
+  if (!scene.scale.fullscreen.available) return null;
+  const g = scene.add.graphics();
+  const draw = () => {
+    g.clear();
+    g.fillStyle(0x2a1420, 1); g.fillRoundedRect(-32, -28, 64, 64, 16);
+    g.fillStyle(0x7a1c2e, 1); g.fillRoundedRect(-32, -32, 64, 64, 16);
+    g.lineStyle(3, 0x2a1420, 1); g.strokeRoundedRect(-32, -32, 64, 64, 16);
+    g.lineStyle(5, 0xffffff, 1);
+    const k = scene.scale.isFullscreen ? -1 : 1; // arrows point out (enter) or in (exit)
+    for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      const cx = sx * (k > 0 ? 14 : 6), cy = sy * (k > 0 ? 14 : 6);
+      g.lineBetween(cx, cy, cx - sx * 9 * k, cy); g.lineBetween(cx, cy, cx, cy - sy * 9 * k);
+    }
+  };
+  draw();
+  const c = scene.add.container(x, y, [g]).setSize(64, 64).setInteractive({ useHandCursor: true });
+  c.on('pointerup', (_p: unknown, _x: unknown, _y: unknown, ev: Phaser.Types.Input.EventData) => {
+    ev?.stopPropagation?.();
+    AudioManager.play('pop');
+    if (scene.scale.isFullscreen) scene.scale.stopFullscreen(); else scene.scale.startFullscreen();
+  });
+  scene.scale.on('enterfullscreen', draw); scene.scale.on('leavefullscreen', draw);
+  scene.events.once('shutdown', () => { scene.scale.off('enterfullscreen', draw); scene.scale.off('leavefullscreen', draw); });
+  return c;
+}

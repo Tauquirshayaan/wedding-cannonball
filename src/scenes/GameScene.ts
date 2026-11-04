@@ -3,6 +3,7 @@ import { GAME_W, GAME_H, GROUND_Y, PHYS, STEP_MS, FONT } from '../config';
 import { OBJ } from '../data/objectTypes';
 import { getLevel, EndlessRun } from '../levels';
 import { ENDLESS_BASE, DAILY_BASE } from '../levels/endless';
+import { onResize, safeArea } from '../ui/Layout';
 import { themeFor, chosenOutfit, themeTextures, releaseThemeTextures, OUTFITS } from '../art/Themes';
 import type { LevelData } from '../levels/types';
 import { buildLevel, LevelWorld, Prop, Bouncer } from '../objects/LevelBuilder';
@@ -116,7 +117,7 @@ export class GameScene extends Phaser.Scene {
     const theme = themeFor(L.id);
     const tk = themeTextures(this, theme);
     Ragdoll.outfit = chosenOutfit(L.id, SaveManager.data.outfit, SaveManager.totalStars(), (i) => SaveManager.level(i).cleared).id;
-    const sky = this.add.image(GAME_W / 2, GAME_H / 2, tk.sky).setScrollFactor(0).setDepth(-10);
+    const sky = this.add.image(0, 0, tk.sky).setScrollFactor(0).setDepth(-10);
     this.add.tileSprite(-600, GROUND_Y - 290, L.width + 3000, 300, tk.far).setOrigin(0).setScrollFactor(0.2, 0.35).setDepth(-9);
     this.add.tileSprite(-600, GROUND_Y - 320, L.width + 3000, 330, tk.near).setOrigin(0).setScrollFactor(0.5, 0.7).setDepth(-8);
     this.add.tileSprite(-1200, GROUND_Y - 11, L.width + 2400, 120, tk.ground).setOrigin(0).setDepth(2);
@@ -202,8 +203,14 @@ export class GameScene extends Phaser.Scene {
     // --- intro pan: stage -> cannon ---
     // whole level (cannon to stage) fits on one screen while aiming
     const right = L.stage.x + L.stage.w + 90;
-    this.fitZoom = Math.min(1, GAME_W / right);
+    this.fitZoom = Math.min(1, this.scale.width / right);
     this.flightZoom = Math.min(1, this.fitZoom * 1.45);
+    onResize(this, () => {
+      this.cameras.main.setSize(this.scale.width, this.scale.height);
+      this.fitZoom = Math.min(1, this.scale.width / (L.stage.x + L.stage.w + 90));
+      this.flightZoom = Math.min(1, this.fitZoom * 1.45);
+      this.applyCamera();
+    });
     const stageCx = L.stage.x + L.stage.w / 2;
     this.cam.x = stageCx; this.cam.y = L.stage.y - 120; this.cam.zoom = 1;
     this.applyCamera();
@@ -220,17 +227,18 @@ export class GameScene extends Phaser.Scene {
 
   // ---------------- camera ----------------
   private aimCamX() { return (this.level.stage.x + this.level.stage.w + 90) / 2; }
-  private aimCamY() { return GAME_H - GAME_H / 2 / this.fitZoom; }
+  private aimCamY() { return GAME_H - this.scale.height / 2 / this.fitZoom; }
 
   private sky!: Phaser.GameObjects.Image;
 
   private applyCamera() {
     // the sky is screen-fixed: counter the camera zoom so it always just covers the view
-    this.sky?.setScale(2.1 / this.cam.zoom);
+    // the sky is screen-fixed: keep it centred and covering the view at any zoom and screen shape
+    if (this.sky) this.sky.setPosition(this.scale.width / 2, this.scale.height / 2).setScale((Math.max(this.scale.width / 640, this.scale.height / 360) * 1.05) / this.cam.zoom);
     const c = this.cameras.main;
     const z = this.cam.zoom;
     c.setZoom(z);
-    const halfW = GAME_W / 2 / z, halfH = GAME_H / 2 / z;
+    const halfW = this.scale.width / 2 / z, halfH = this.scale.height / 2 / z;
     const w = this.level.width;
     const x = w < halfW * 2 ? w / 2 : Phaser.Math.Clamp(this.cam.x, halfW, w - halfW);
     const y = Phaser.Math.Clamp(this.cam.y, -1600 + halfH, GAME_H - halfH);
@@ -239,7 +247,9 @@ export class GameScene extends Phaser.Scene {
 
   // ---------------- input ----------------
   private inHudZone(p: Phaser.Input.Pointer) {
-    return p.y < 96 && (p.x < 360 || p.x > GAME_W - 200);
+    const s = safeArea(this); // the HUD sits in the centred 1280×720 safe area
+    const x = p.x - s.ox, y = p.y - s.oy;
+    return y < 96 && (x < 360 || x > GAME_W - 200);
   }
 
   private onDown(p: Phaser.Input.Pointer) {

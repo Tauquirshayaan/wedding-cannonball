@@ -4,12 +4,18 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#0e1a40" />
+    <!-- iPhone/iPad: "Add to Home Screen" opens the game full screen (Safari cannot hide its bars otherwise) -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Cannonball" />
+    <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Human%20Cannonball%3A%20Wedding%20Edition%22%2C%22short_name%22%3A%22Cannonball%22%2C%22display%22%3A%22fullscreen%22%2C%22orientation%22%3A%22landscape%22%2C%22background_color%22%3A%22%230e1a40%22%2C%22theme_color%22%3A%22%230e1a40%22%2C%22start_url%22%3A%22.%22%7D" />
     <meta name="description" content="Human Cannonball: Wedding Edition — fire Lucky, the late wedding guest, across a chaotic Indian wedding and land on the stage!" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230e1a40'/%3E%3Crect x='10' y='22' width='38' height='18' rx='6' fill='%234a3b6b' stroke='%23f4c430' stroke-width='3' transform='rotate(-30 30 32)'/%3E%3Ccircle cx='24' cy='46' r='9' fill='%238b4a24' stroke='%23f4c430' stroke-width='3'/%3E%3Ccircle cx='48' cy='14' r='7' fill='%23e6197e'/%3E%3C/svg%3E" />
     <title>Human Cannonball: Wedding Edition</title>
     <style>
-      html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #0e1a40; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
-      #game { position: fixed; inset: 0; }
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; height: 100dvh; overscroll-behavior: none; position: fixed; inset: 0; background: #0e1a40; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+      #game { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; }
       #game canvas { display: block; }
       #rotate { display: none; position: fixed; inset: 0; z-index: 10; background: #0e1a40; color: #f4c430; font: bold 22px 'Trebuchet MS', Verdana, sans-serif; text-align: center; align-items: center; justify-content: center; flex-direction: column; gap: 18px; }
       #rotate .phone { width: 46px; height: 80px; border: 5px solid #f7a21b; border-radius: 10px; animation: rot 1.6s ease-in-out infinite; }
