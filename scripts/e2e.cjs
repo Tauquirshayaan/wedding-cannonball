@@ -289,16 +289,16 @@ async function winLevel(p, id) {
       // run out of launches for real (no fast-forward) and take the rewarded +1 launch
       await game(p, () => { const g = window.__hcGame; for (const k of ['Result', 'Pause']) if (g.scene.isActive(k)) g.scene.stop(k); g.scene.start('Game', { levelId: 2 }); });
       await p.waitForTimeout(400);
-      await game(p, () => { window.__hcScene.testSteps = 0; });
+      // first two misses fast-forwarded; the last one in real time so the ad offer can appear
       for (let i = 0; i < 3; i++) {
-        await until(p, () => ['intro', 'aim'].includes(window.__hcScene.state), null, 15000);
-        await game(p, () => window.__hcScene.testLaunch(10, 0.12));
-        await until(p, () => !['flight'].includes(window.__hcScene.state), null, 15000);
+        await until(p, () => ['intro', 'aim'].includes(window.__hcScene.state), null, 40000);
+        await game(p, (last) => { window.__hcScene.testSteps = last ? 0 : 60; window.__hcScene.testLaunch(10, 0.12); }, i === 2);
+        await until(p, () => window.__hcScene.state !== 'flight', null, 40000);
       }
-      check(await until(p, () => window.__hcScene.state === 'offer', null, 15000), 'out of launches → rewarded "+1 launch" offer appears');
+      check(await until(p, () => window.__hcScene.state === 'offer', null, 40000), 'out of launches → rewarded "+1 launch" offer appears');
       await p.waitForTimeout(1300); // the offer panel slides in after 0.7 s
       await p.mouse.click(640, 390);
-      check(await until(p, () => window.__hcScene.state === 'aim' && window.__hcScene.launchesLeft === 1, null, 10000), 'watching the ad grants one more launch');
+      check(await until(p, () => window.__hcScene.state === 'aim' && window.__hcScene.launchesLeft === 1, null, 30000), 'watching the ad grants one more launch');
     }
     if (portal.name === 'youtube') check(await game(p, () => !document.body.classList.contains('need-landscape')), 'YouTube build plays in portrait (no rotate block)');
     check(await game(p, () => { const t = window.__hcGame.scene.getScene('Title'); return !t || !t.children || true; }) && await game(p, () => !document.fullscreenElement), 'portal build does not force full screen');

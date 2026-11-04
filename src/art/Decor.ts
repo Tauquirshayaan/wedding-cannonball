@@ -119,27 +119,30 @@ export function decorateLevel(scene: Phaser.Scene, L: LevelData, theme: Theme): 
   }
 
   const low = SaveManager.data.lowfx; // 'Reduce effects': no light strings or crowd
-  // twinkling overhead light strings (two phases alternating)
-  const strings: Phaser.GameObjects.Graphics[] = [];
+  // twinkling overhead light strings: each phase is pre-drawn once into a 960 px repeating tile
+  // (three 320 px swags), so per frame it is a single textured quad instead of thousands of vector shapes
+  const strings: Phaser.GameObjects.TileSprite[] = [];
+  const key = (phase: number) => `lights_${phase}_${lights.join('').replace(/#/g, '')}`;
   for (let phase = 0; phase < (low ? 0 : 2); phase++) {
-    const g = scene.add.graphics().setDepth(1).setScrollFactor(0.95, 1);
-    for (let x0 = -200; x0 < L.width + 400; x0 += 320) {
-      for (let i = 0; i <= 12; i++) {
-        const t = i / 12, x = x0 + t * 320, y = 40 + Math.sin(t * Math.PI) * 46;
-        if ((i + phase) % 2) continue;
-        const col = Phaser.Display.Color.HexStringToColor(lights[(((i + Math.floor(x0 / 320)) % lights.length) + lights.length) % lights.length]).color;
-        g.fillStyle(col, 0.22); g.fillCircle(x, y, 9);
-        g.fillStyle(col, 1); g.fillCircle(x, y, 3.5);
+    make(scene, key(phase), 960, 110, (c) => {
+      for (let seg = 0; seg < 3; seg++) {
+        const x0 = seg * 320;
+        if (phase === 0) {
+          c.strokeStyle = 'rgba(42,20,32,0.6)'; c.lineWidth = 1.5; c.beginPath();
+          for (let i = 0; i <= 16; i++) { const t = i / 16; const x = x0 + t * 320, y = 20 + Math.sin(t * Math.PI) * 46; if (i) c.lineTo(x, y); else c.moveTo(x, y); }
+          c.stroke();
+        }
+        for (let i = 0; i <= 12; i++) {
+          if ((i + phase) % 2) continue;
+          const t = i / 12, x = x0 + t * 320, y = 20 + Math.sin(t * Math.PI) * 46;
+          const col = lights[(i + seg) % lights.length];
+          const rgb = Phaser.Display.Color.HexStringToColor(col);
+          c.fillStyle = `rgba(${rgb.red},${rgb.green},${rgb.blue},0.22)`; c.beginPath(); c.arc(x, y, 9, 0, Math.PI * 2); c.fill();
+          c.fillStyle = col; c.beginPath(); c.arc(x, y, 3.5, 0, Math.PI * 2); c.fill();
+        }
       }
-    }
-    strings.push(g);
-  }
-  const wire = scene.add.graphics().setDepth(1).setScrollFactor(0.95, 1);
-  wire.lineStyle(1.5, 0x2a1420, 0.6);
-  for (let x0 = -200; x0 < L.width + 400; x0 += 320) {
-    wire.beginPath();
-    for (let i = 0; i <= 16; i++) { const t = i / 16; const x = x0 + t * 320, y = 40 + Math.sin(t * Math.PI) * 46; if (i) wire.lineTo(x, y); else wire.moveTo(x, y); }
-    wire.strokePath();
+    });
+    strings.push(scene.add.tileSprite(-200, 20, L.width + 600, 110, key(phase)).setOrigin(0).setDepth(1).setScrollFactor(0.95, 1));
   }
   if (strings.length) {
     scene.tweens.add({ targets: strings[0], alpha: { from: 1, to: 0.35 }, duration: 600, yoyo: true, repeat: -1 });
