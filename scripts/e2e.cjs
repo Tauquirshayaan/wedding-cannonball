@@ -248,7 +248,7 @@ async function winLevel(p, id) {
   check(afterReset.voice === false, 'voice commentary toggle saves');
   check(afterReset.haptics === true && afterReset.lowfx === false, 'vibration and reduce-effects settings exist with sane defaults');
   check(Object.keys(afterReset.levels).length === 0, 'reset progress (tap twice) clears progress');
-  await p.mouse.click(640, 560);
+  await p.mouse.click(520, 560); // Back (left of About)
   check(await until(p, () => window.__hcGame.scene.isActive('Title')), 'settings Back returns to the title');
   await game(p, () => { const t = window.__hcGame.scene.getScene('Title'); t.scene.pause(); t.scene.launch('Settings', { from: 'Title' }); });
   await p.waitForTimeout(400); await p.mouse.click(760, 560);
