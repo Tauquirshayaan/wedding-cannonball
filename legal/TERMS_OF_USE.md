@@ -1,9 +1,9 @@
-# Terms of Use: Human Cannonball: Wedding Edition
+# Terms of Use: Wedding Cannon: Shaadi Chaos
 
 **Effective date:** 4 November 2026
 **Developer:** {{DEVELOPER_NAME}} · **Contact:** {{SUPPORT_EMAIL}}
 
-By playing *Human Cannonball: Wedding Edition* (the "Game") you agree to these terms.
+By playing *Wedding Cannon: Shaadi Chaos* (the "Game") you agree to these terms.
 
 ## 1. Licence to play
 We give you a personal, non-exclusive, non-transferable, revocable licence to play the Game for free, for personal and non-commercial use, through the official places where it is published. These are our website, itch.io, CrazyGames, Poki and YouTube Playables, or any other place we list.

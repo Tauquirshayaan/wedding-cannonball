@@ -1,4 +1,4 @@
-# Third-party notices and credits: Human Cannonball: Wedding Edition
+# Third-party notices and credits: Wedding Cannon: Shaadi Chaos
 
 ## Original work
 The game's code, characters, artwork (drawn in code with Canvas 2D), music (synthesised with Web Audio), level designs, text and most sound effects are original works of {{DEVELOPER_NAME}}. No AI-generated or third-party artwork is used.
@@ -55,4 +55,4 @@ The Pixabay Content License allows free commercial use in games without attribut
 The game uses the player's system fonts (Trebuchet MS, Verdana, Segoe UI or Roboto). No font files are bundled.
 
 ## Trademarks
-"Human Cannonball: Wedding Edition" and the character "Lucky" are used by {{DEVELOPER_NAME}}. Platform names (CrazyGames, Poki, YouTube) belong to their owners and are mentioned only to describe where the game is available.
+"Wedding Cannon: Shaadi Chaos" and the character "Lucky" are used by {{DEVELOPER_NAME}}. Platform names (CrazyGames, Poki, YouTube) belong to their owners and are mentioned only to describe where the game is available.

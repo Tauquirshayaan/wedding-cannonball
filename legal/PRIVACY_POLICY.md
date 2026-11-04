@@ -1,10 +1,10 @@
-# Privacy Policy: Human Cannonball: Wedding Edition
+# Privacy Policy: Wedding Cannon: Shaadi Chaos
 
 **Effective date:** 4 November 2026
 **Developer:** {{DEVELOPER_NAME}} ("we", "us")
 **Contact:** {{SUPPORT_EMAIL}}
 
-This policy explains what information *Human Cannonball: Wedding Edition* (the "Game") handles when you play it on our website, on itch.io, on CrazyGames, on Poki or on YouTube Playables.
+This policy explains what information *Wedding Cannon: Shaadi Chaos* (the "Game") handles when you play it on our website, on itch.io, on CrazyGames, on Poki or on YouTube Playables.
 
 ## 1. Summary
 - We do **not** collect, sell or share your personal information.

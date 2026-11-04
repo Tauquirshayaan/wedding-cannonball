@@ -60,7 +60,7 @@ for (const l of lines) {
   const ssml = `<speak version="1.0" xml:lang="hi-IN"><voice name="${v}"><prosody pitch="${st.pitch}" rate="${st.rate}">${esc(l.hi)}</prosody></voice></speak>`;
   const r = await fetch(`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {
     method: 'POST',
-    headers: { 'Ocp-Apim-Subscription-Key': key, 'Content-Type': 'application/ssml+xml', 'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3', 'User-Agent': 'human-cannonball-voicegen' },
+    headers: { 'Ocp-Apim-Subscription-Key': key, 'Content-Type': 'application/ssml+xml', 'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3', 'User-Agent': 'wedding-cannon-voicegen' },
     body: ssml,
   });
   if (!r.ok) { console.error(`${l.id}: HTTP ${r.status} ${await r.text()}`); continue; }

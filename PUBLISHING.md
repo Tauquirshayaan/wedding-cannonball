@@ -22,16 +22,16 @@ Use a **dedicated support email**, not your personal one. It will be public.
 
 ## Step 2: Confirm two things only you can confirm
 - [ ] The licence for the **"ow"** and **"awww"** sound clips (see `legal/THIRD_PARTY_NOTICES.md`)
-- [ ] The **game name**. "Human Cannonball" clashes with a 1979 Atari game, so see the recommendation in `marketing/STORE_LISTING.md`.
+- [x] Game name decided: **Wedding Cannon: Shaadi Chaos** (short: *Wedding Cannon*). Do a quick availability search before you publish (see `marketing/STORE_LISTING.md` § 1).
 
 ## Step 3: Upload
 
 | Platform | Upload | Guide |
 | --- | --- | --- |
-| itch.io | `release/human-cannonball-web.zip` | `LAUNCH.md` § 2 |
-| CrazyGames | `release/human-cannonball-crazygames.zip` | `LAUNCH.md` § 3 |
-| YouTube Playables | `release/human-cannonball-youtube.zip` | `LAUNCH.md` § 5 |
-| Poki (later) | `release/human-cannonball-poki.zip` | `LAUNCH.md` § 4 |
+| itch.io | `release/wedding-cannon-web.zip` | `LAUNCH.md` § 2 |
+| CrazyGames | `release/wedding-cannon-crazygames.zip` | `LAUNCH.md` § 3 |
+| YouTube Playables | `release/wedding-cannon-youtube.zip` | `LAUNCH.md` § 5 |
+| Poki (later) | `release/wedding-cannon-poki.zip` | `LAUNCH.md` § 4 |
 
 ## Documents
 

@@ -71,8 +71,8 @@ export class PreloadScene extends Phaser.Scene {
     centerSafeArea(this);
     this.cameras.main.setBackgroundColor('#0e1a40');
     const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
-    title(this, GAME_W / 2, 250, 'Human Cannonball', 64);
-    title(this, GAME_W / 2, 320, 'WEDDING EDITION', 34, '#ff7eb6');
+    title(this, GAME_W / 2, 250, 'Wedding Cannon', 64);
+    title(this, GAME_W / 2, 320, 'SHAADI CHAOS', 34, '#ff7eb6');
     const g = this.add.graphics();
     const tipText = this.add.text(GAME_W / 2, 520, tip, { fontFamily: FONT, fontSize: '24px', color: '#ffe9b8' }).setOrigin(0.5);
     const draw = (p: number) => {
@@ -129,8 +129,8 @@ export class TitleScene extends Phaser.Scene {
     this.add.image(1160, GROUND_Y - 58, 'aunty_1');
     this.add.image(960, GROUND_Y - 44, 'photographer_0').setFlipX(true);
 
-    const logo = title(this, GAME_W / 2, 150, 'HUMAN CANNONBALL', 84);
-    const sub = title(this, GAME_W / 2, 238, 'WEDDING EDITION', 44, '#ff7eb6');
+    const logo = title(this, GAME_W / 2, 150, 'WEDDING CANNON', 84);
+    const sub = title(this, GAME_W / 2, 238, 'SHAADI CHAOS', 44, '#ff7eb6');
     this.tweens.add({ targets: logo, scale: 1.04, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     sub.setAngle(-2);
     this.add.text(GAME_W / 2, 296, 'Lucky is late for the shaadi. Fire him in!', { fontFamily: FONT, fontSize: '24px', color: '#ffe9b8', stroke: '#2a1420', strokeThickness: 5 }).setOrigin(0.5);
@@ -472,14 +472,14 @@ export class ResultScene extends Phaser.Scene {
     Analytics.track('share_click', { level: d.levelId });
     const link = platform.allowExternalLinks ? ' ' + window.location.href.split('?')[0] : '';
     const text = d.daily
-      ? `Human Cannonball ${d.name}\n🎯 ${d.cleared ? `Landed in ${d.daily.launches}/3` : 'Missed the stage'} · 💥 ${rupees(d.damage)} · 🔥 ${d.cleared ? d.daily.streak : SaveManager.data.daily.streak}-day streak${link}`
+      ? `Wedding Cannon ${d.name}\n🎯 ${d.cleared ? `Landed in ${d.daily.launches}/3` : 'Missed the stage'} · 💥 ${rupees(d.damage)} · 🔥 ${d.cleared ? d.daily.streak : SaveManager.data.daily.streak}-day streak${link}`
       : d.run
-      ? `I survived ${d.cleared ? d.run.round : d.run.round - 1} rounds of Endless Baraat with ${rupees(d.run.damage)} of Shaadi Damage in Human Cannonball: Wedding Edition 🎆 Can you beat it?${link}`
-      : `I caused ${rupees(d.damage)} of Shaadi Damage on Level ${d.levelId} of Human Cannonball: Wedding Edition 🎆 Can you beat it?${link}`;
+      ? `I survived ${d.cleared ? d.run.round : d.run.round - 1} rounds of Endless Baraat with ${rupees(d.run.damage)} of Shaadi Damage in Wedding Cannon: Shaadi Chaos 🎆 Can you beat it?${link}`
+      : `I caused ${rupees(d.damage)} of Shaadi Damage on Level ${d.levelId} of Wedding Cannon: Shaadi Chaos 🎆 Can you beat it?${link}`;
     try {
       const nav = navigator as Navigator & { share?: (d: { text: string; title?: string }) => Promise<void> };
       if (nav.share && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-        await nav.share({ title: 'Human Cannonball: Wedding Edition', text });
+        await nav.share({ title: 'Wedding Cannon: Shaadi Chaos', text });
         return;
       }
       await navigator.clipboard.writeText(text);
@@ -583,9 +583,9 @@ export class CoverScene extends Phaser.Scene {
       fontFamily: FONT, fontSize: `${Math.round(size * k)}px`, color, fontStyle: 'bold', stroke: '#2a1420', strokeThickness: Math.round(size * k / 6), align: 'center',
     }).setOrigin(0.5);
     if (portrait) {
-      t('HUMAN', h * 0.11, 96, '#f4c430'); t('CANNONBALL', h * 0.11 + 100 * k, 96, '#f4c430'); t('WEDDING EDITION', h * 0.11 + 190 * k, 54, '#ff7eb6');
+      t('WEDDING', h * 0.11, 96, '#f4c430'); t('CANNON', h * 0.11 + 100 * k, 96, '#f4c430'); t('SHAADI CHAOS', h * 0.11 + 190 * k, 54, '#ff7eb6');
     } else {
-      t('HUMAN CANNONBALL', h * 0.17, 96, '#f4c430'); t('WEDDING EDITION', h * 0.17 + 95 * k, 54, '#ff7eb6');
+      t('WEDDING CANNON', h * 0.17, 96, '#f4c430'); t('SHAADI CHAOS', h * 0.17 + 95 * k, 54, '#ff7eb6');
     }
   }
 }
@@ -602,7 +602,7 @@ export class AboutScene extends Phaser.Scene {
     closeButton(this, GAME_W / 2 + 392, 76, back);
     this.input.keyboard?.once('keydown-ESC', back);
     const lines = [
-      `Human Cannonball: Wedding Edition  ·  version ${pkg.version}`,
+      `Wedding Cannon: Shaadi Chaos  ·  version ${pkg.version}`,
       `Made by ${publisher.developer}${publisher.email ? `  ·  ${publisher.email}` : ''}`,
       '',
       'Privacy: no account, no personal data collected, no tracking.',

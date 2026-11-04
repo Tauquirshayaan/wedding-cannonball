@@ -12,6 +12,6 @@ const size = (dir) => readdirSync(dir, { recursive: true }).reduce((a, f) => {
 for (const b of builds) {
   const dir = join('dist', b);
   if (!existsSync(dir)) continue;
-  execSync(`cd ${dir} && zip -qr ../../release/human-cannonball-${b}.zip .`);
-  console.log(`${b.padEnd(11)} ${(size(dir) / 1024).toFixed(0).padStart(6)} KB  -> release/human-cannonball-${b}.zip`);
+  execSync(`cd ${dir} && zip -qr ../../release/wedding-cannon-${b}.zip .`);
+  console.log(`${b.padEnd(11)} ${(size(dir) / 1024).toFixed(0).padStart(6)} KB  -> release/wedding-cannon-${b}.zip`);
 }

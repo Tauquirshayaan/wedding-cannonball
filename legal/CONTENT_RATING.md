@@ -1,4 +1,4 @@
-# Content rating answers: Human Cannonball: Wedding Edition
+# Content rating answers: Wedding Cannon: Shaadi Chaos
 
 Use these when a portal or rating questionnaire (IARC, Google, CrazyGames, Poki) asks about the game's content.
 

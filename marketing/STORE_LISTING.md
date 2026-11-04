@@ -6,30 +6,19 @@ Copy and paste these into CrazyGames, YouTube Playables, itch.io or Poki. Fill i
 
 ## 1. Game name
 
-**Current title:** *Human Cannonball: Wedding Edition*
-
-⚠️ **Name risk:** "Human Cannonball" is also the title of a 1979 Atari 2600 game, and several other games use it. A unique name is safer (avoids trademark complaints and store rejections) and easier to find in search.
-
-**Recommended name:** **Shaadi Cannon**
-Subtitle where allowed: *Shaadi Cannon: Late Guest Launch*
+| Use | Name |
+| --- | --- |
+| **Full title** | **Wedding Cannon: Shaadi Chaos** |
+| Short title (small tiles, app icon, home screen) | **Wedding Cannon** |
+| Hashtag | #WeddingCannon · #ShaadiChaos |
+| Developer / publisher | *your name or studio, e.g. **Cenova Games** (matches @cenovabuild)* |
 
 Why this name:
-- It's short and memorable, and says exactly what the game is (a wedding + a cannon).
-- "Shaadi" is a strong search word for Indian players and stands out for global players.
-- It works as a hashtag and a channel name: #ShaadiCannon.
+- **"Wedding Cannon"** says exactly what the game is, in two simple English words, for players anywhere in the world.
+- **"Shaadi Chaos"** adds the Indian flavour and the comedy, and makes the full title distinctive in search.
+- It replaces the old working title "Human Cannonball", which is also a 1979 Atari game.
 
-Other options:
-1. *Baraat Blast*
-2. *Late for the Shaadi!*
-3. *Cannon Baraat*
-
-Before you decide:
-- Search the name on CrazyGames, Poki, YouTube and the Google Play / App Store.
-- Check the trademark database at **ipindiaonline.gov.in** (class 9 and 41).
-
-Changing the in-game title only means updating a few text strings. Tell me the final name and I'll update it everywhere.
-
-**Developer / publisher name suggestion:** **Cenova Games**. It matches your @cenovabuild handle. Otherwise, use your own name.
+Before you publish, search "Wedding Cannon" on CrazyGames, Poki, YouTube, itch.io and the Play Store. Also check the trademark database at **ipindiaonline.gov.in** (classes 9 and 41).
 
 ---
 

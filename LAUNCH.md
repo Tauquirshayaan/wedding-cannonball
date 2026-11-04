@@ -4,20 +4,20 @@
 
 ```bash
 npm install
-npm run build:all       # writes release/human-cannonball-<portal>.zip
+npm run build:all       # writes release/wedding-cannon-<portal>.zip
 ```
 
 ## 2. itch.io (Day 7, first launch)
 
 1. Create a new project. Set **Kind of project** to *HTML*.
-2. Upload `release/human-cannonball-web.zip` and tick **This file will be played in the browser**.
+2. Upload `release/wedding-cannon-web.zip` and tick **This file will be played in the browser**.
 3. Set the viewport to **1280 × 720**, turn on **Mobile friendly** with landscape orientation, and turn on **Fullscreen button**.
 4. Tags: `physics`, `comedy`, `ragdoll`, `india`, `wedding`, `casual`.
 5. Screenshots and a 630×500 cover are ready in `marketing/`. To regenerate them, run `npm run serve` and then `node scripts/screenshots.cjs http://localhost:8080`.
 
 ## 3. CrazyGames
 
-**Upload:** `release/human-cannonball-crazygames.zip` (about 1.8 MB, 12 files, `index.html` at the root).
+**Upload:** `release/wedding-cannon-crazygames.zip` (about 1.8 MB, 12 files, `index.html` at the root).
 
 **Steps**
 1. Go to the CrazyGames developer portal → Submit a game → HTML5. Choose **Basic Launch** first. That gives you a limited-traffic test, and they decide on a Full Launch from your numbers.
@@ -48,13 +48,13 @@ npm run build:all       # writes release/human-cannonball-<portal>.zip
 ## 4. Poki (after 30 days of data)
 
 1. Apply through the Poki for Developers portal and share the itch.io link with your numbers.
-2. Once accepted, upload `release/human-cannonball-poki.zip` to Poki's inspector.
+2. Once accepted, upload `release/wedding-cannon-poki.zip` to Poki's inspector.
 3. Already wired in: `PokiSDK.init`, `gameLoadingFinished`, `gameplayStart/Stop`, and `commercialBreak` on Result → Retry/Next, with audio muted during ads.
 4. Space and the arrow keys are blocked from scrolling the page, and there are no outbound links.
 
 ## 5. YouTube Playables
 
-**Upload:** `release/human-cannonball-youtube.zip`: one self-contained `index.html` (about 1.8 MB). All art, sound and code are inside it.
+**Upload:** `release/wedding-cannon-youtube.zip`: one self-contained `index.html` (about 1.8 MB). All art, sound and code are inside it.
 
 **Steps**
 1. Apply for the YouTube Playables program. Access is by application or invitation, through the YouTube Playables developer page.

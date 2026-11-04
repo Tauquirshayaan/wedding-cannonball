@@ -1,4 +1,4 @@
-# Human Cannonball: Wedding Edition
+# Wedding Cannon: Shaadi Chaos
 
 A 2D physics comedy web game. Lucky, a late wedding guest, is fired from a cannon across a chaotic Indian wedding and has to land on the stage. Knocking things over on the way earns **Shaadi Damage**.
 

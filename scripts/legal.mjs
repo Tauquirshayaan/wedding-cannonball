@@ -50,13 +50,13 @@ h1{color:var(--accent);font-size:1.7rem;line-height:1.25}h2{margin-top:2rem;font
 table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.95rem}th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
 code{background:var(--line);padding:1px 5px;border-radius:4px;font-size:.9em}
 footer{margin-top:3rem;color:var(--muted);font-size:.9rem}
-</style></head><body><main>${body}<footer>Human Cannonball: Wedding Edition · ${esc(vals.DEVELOPER_NAME)} · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="credits.html">Credits</a></footer></main></body></html>
+</style></head><body><main>${body}<footer>Wedding Cannon: Shaadi Chaos · ${esc(vals.DEVELOPER_NAME)} · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a> · <a href="credits.html">Credits</a></footer></main></body></html>
 `;
 
 mkdirSync('public', { recursive: true });
 for (const [src, out, title] of [['legal/PRIVACY_POLICY.md', 'public/privacy.html', 'Privacy Policy'], ['legal/TERMS_OF_USE.md', 'public/terms.html', 'Terms of Use'], ['legal/THIRD_PARTY_NOTICES.md', 'public/credits.html', 'Credits & Licences']]) {
   const md = fill(readFileSync(src, 'utf8'));
-  writeFileSync(out, page(`${title} · Human Cannonball: Wedding Edition`, md2html(md)));
+  writeFileSync(out, page(`${title} · Wedding Cannon: Shaadi Chaos`, md2html(md)));
   console.log('wrote', out);
 }
 // also fill the in-game About screen details
