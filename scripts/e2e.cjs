@@ -250,6 +250,14 @@ async function winLevel(p, id) {
   check(Object.keys(afterReset.levels).length === 0, 'reset progress (tap twice) clears progress');
   await p.mouse.click(640, 560);
   check(await until(p, () => window.__hcGame.scene.isActive('Title')), 'settings Back returns to the title');
+  await game(p, () => { const t = window.__hcGame.scene.getScene('Title'); t.scene.pause(); t.scene.launch('Settings', { from: 'Title' }); });
+  await p.waitForTimeout(400); await p.mouse.click(760, 560);
+  check(await until(p, () => window.__hcGame.scene.isActive('About'), null, 5000), 'Settings → About & Credits opens');
+  check(await game(p, () => window.__hcGame.scene.getScene('About').children.list.some((c) => c.text && /Phaser 3 \(MIT/.test(c.text))), 'About screen shows version and licence credits');
+  await p.mouse.click(640 + 392, 76);
+  check(await until(p, () => !window.__hcGame.scene.isActive('About') && window.__hcGame.scene.isActive('Settings'), null, 5000), 'About ✕ returns to Settings');
+  await p.mouse.click(640 + 276, 124);
+  await until(p, () => window.__hcGame.scene.isActive('Title'), null, 5000);
 
   check(errs.length === 0, `no console errors or CSP violations${errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''}`);
   await p.close(); web.close();

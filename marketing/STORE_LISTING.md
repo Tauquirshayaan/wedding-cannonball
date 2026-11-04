@@ -1,47 +1,130 @@
-# Store listing: Human Cannonball: Wedding Edition
+# Store listing and publishing details
 
-## Title
-Human Cannonball: Wedding Edition
+Copy and paste these into CrazyGames, YouTube Playables, itch.io or Poki. Fill in `{{…}}` with your details.
 
-## Short description (up to ~120 characters)
-Fire Lucky, the late wedding guest, across a chaotic Indian wedding and land him on the stage!
+---
 
-## Long description
-Lucky is late for his cousin's shaadi, so he's taking the fastest route there: a cannon.
+## 1. Game name
 
-Drag back, aim and fire Lucky across the wedding. Smash the laddoo towers, bounce off the dhol, ride the firework rockets, dodge the hot kadhai and the sticky chashni, and knock over dancing uncles, aunties and photographers. Then land him on the stage before you run out of launches.
+**Current title:** *Human Cannonball: Wedding Edition*
 
-The more chaos you cause on the way, the more Shaadi Damage you score.
+⚠️ **Name risk:** "Human Cannonball" is also the title of a 1979 Atari 2600 game, and several other games use it. A unique name is safer (avoids trademark complaints and store rejections) and easier to find in search.
 
-- 1,002 levels across 10 wedding venues, from a palace courtyard and a beach sunset to a grand ballroom
-- A Boss level every 50 levels
-- A Daily Challenge, with a streak to keep
-- Endless Baraat mode with your best run saved
-- 20 outfits to unlock, including sherwanis, kurtas, suits and a tuxedo
-- Ragdoll physics, slow-motion crash replays and live commentary
-- Plays on phones, tablets and desktop
+**Recommended name:** **Shaadi Cannon**
+Subtitle where allowed: *Shaadi Cannon: Late Guest Launch*
 
-## Controls
+Why this name:
+- It's short and memorable, and says exactly what the game is (a wedding + a cannon).
+- "Shaadi" is a strong search word for Indian players and stands out for global players.
+- It works as a hashtag and a channel name: #ShaadiCannon.
+
+Other options:
+1. *Baraat Blast*
+2. *Late for the Shaadi!*
+3. *Cannon Baraat*
+
+Before you decide:
+- Search the name on CrazyGames, Poki, YouTube and the Google Play / App Store.
+- Check the trademark database at **ipindiaonline.gov.in** (class 9 and 41).
+
+Changing the in-game title only means updating a few text strings. Tell me the final name and I'll update it everywhere.
+
+**Developer / publisher name suggestion:** **Cenova Games**. It matches your @cenovabuild handle. Otherwise, use your own name.
+
+---
+
+## 2. Taglines (pick one)
+- *Late for the shaadi? Take the cannon!*
+- *Fire Lucky across the wedding. Land on the stage. Break everything.*
+- *Angry Birds meets a big fat Indian wedding, and you're the bird.* (use only on your own social posts; avoid other games' names in store listings)
+
+## 3. Short description
+
+**About 80 characters**
+> Fire the late wedding guest across a chaotic Indian wedding and land on the stage!
+
+**About 120 characters**
+> Lucky is late for the shaadi! Launch him from a cannon, smash the wedding decor, dodge the hot kadhai and land on stage.
+
+**About 160 characters**
+> A hilarious physics game: fire Lucky across a chaotic Indian wedding, smash laddoo towers, bounce off the dhol, ride firework rockets and land him on the stage!
+
+## 4. Long description
+
+Lucky is late for his cousin's shaadi, so he's taking the fastest way in: **a cannon**.
+
+Drag back, aim and fire Lucky across a wild Indian wedding. Bounce off the dhol, ride the firework rockets and crash through laddoo towers and five-tier cakes. Dodge the hot kadhai and the sticky chashni, and send dancing uncles, aunties and photographers flying. Then land him on the stage before your launches run out!
+
+The more chaos you cause on the way, the more **Shaadi Damage** you score.
+
+**Features**
+- 🎯 **1,002 levels** across 10 venues: garden lawn, palace courtyard, beach sunset, city rooftop, banquet hall and more
+- 👑 **Boss levels** every 50 levels
+- 📅 **Daily Challenge:** the same level for everyone each day, with a streak to keep
+- ♾️ **Endless Baraat:** how many rounds can you survive?
+- 🤵 **20 outfits:** kurtas, sherwanis, suits, a tuxedo, plus special unlocks for clearing milestone levels
+- 💥 Ragdoll physics, slow-motion crash replays and live Hinglish commentary
+- 📱 Plays on phones, tablets and computers
+
+**How to play**
 - **Aim and fire:** drag back, then release. A longer pull means more power.
 - **Mid-air:** tap once to flail upward.
-- **Skip the intro or replay:** tap, or press Space.
-- **Restart:** R. **Pause:** Esc or P.
+- **Earn ★★★:** land on the stage, hit the damage target, and collect the shagun gift.
 
-## Tags and categories
-Physics, Ragdoll, Funny, Casual, Skill, Launch, Cannon, Wedding, India, Bollywood-style (no film music), 2D, Mobile, Kids-friendly (cartoon slapstick, no blood)
+## 5. Controls (for the portal's "controls" field)
+- **Mouse / touch:** drag back and release to fire. Tap mid-air to flail.
+- **Space:** skip the intro or replay
+- **R:** restart
+- **Esc / P:** pause
 
-## Age and content
-Cartoon slapstick only: no blood, no weapons other than a comic cannon, no gambling, no religious content.
-- Data: no personal data is collected. Progress is saved on the device, or in the portal's cloud save.
+## 6. Categories and tags
 
-## Images in this folder
+| Platform | Category | Tags |
+| --- | --- | --- |
+| CrazyGames | Casual, or Physics if offered | physics, ragdoll, cannon, funny, casual, skill, 2d, mouse, mobile, indian, wedding, launch |
+| Poki | Casual / Skill | physics, funny, ragdoll, cannon, launch, 2d |
+| itch.io | Genre: Physics; Kind: HTML | physics, comedy, ragdoll, india, wedding, casual, cannon, 2d, mobile-friendly |
+| YouTube Playables | Casual / Arcade | |
 
-| File | Use |
+## 7. Technical details portals ask for
+
+| Field | Value |
 | --- | --- |
-| `cover-landscape-1920x1080.png` | Landscape cover, 16:9 (CrazyGames, YouTube) |
-| `cover-portrait-800x1200.png` | Portrait cover, 2:3 (CrazyGames) |
-| `cover-square-800x800.png` | Square cover, 1:1 (CrazyGames, small tiles) |
-| `cover-itch-630x500.png` | itch.io cover |
-| `01-title.png` … `07-level10.png` | Gameplay screenshots, 1280×720 |
+| Engine | Phaser 3 (HTML5 / WebGL, falls back to Canvas) |
+| Orientation | Landscape (YouTube build also supports portrait) |
+| Devices | Desktop, mobile, tablet |
+| Input | Mouse, touch, keyboard |
+| Download size | About 0.57 MB zipped, about 1.8 MB unzipped |
+| Files | 12 files (YouTube build: 1 file) |
+| Saves | Local storage, plus platform cloud save (CrazyGames, YouTube) |
+| Ads | Midgame between levels, plus opt-in rewarded "+1 launch" (CrazyGames, Poki only) |
+| In-app purchases | None |
+| Languages | English, with Hinglish flavour text |
+| Age rating | Everyone / PEGI 3–7 (mild cartoon slapstick). See `legal/CONTENT_RATING.md` |
+| Data collection | None (see `legal/PRIVACY_POLICY.md`) |
+| Version | 1.0.0 |
 
-To regenerate the covers at any size, open the game with `?cover=1` in a browser window of that size and take a screenshot.
+## 8. Release notes: version 1.0.0
+- First release: 1,002 levels, Boss levels, Daily Challenge, Endless Baraat
+- 20 outfits, including suits and milestone unlocks
+- 10 wedding venues, each with its own decorations
+- Live commentary and cartoon reactions
+- Full-screen, responsive layout for phones, tablets and desktops
+
+## 9. Images (in this folder)
+
+| File | Size | Use |
+| --- | --- | --- |
+| `cover-landscape-1920x1080.png` | 16:9 | Main cover (CrazyGames, YouTube) |
+| `cover-portrait-800x1200.png` | 2:3 | Portrait cover (CrazyGames) |
+| `cover-square-800x800.png` | 1:1 | Square tile / icon |
+| `cover-itch-630x500.png` | 630×500 | itch.io cover |
+| `01-title.png` … `07-level10.png` | 1280×720 | Screenshots |
+
+To re-render a cover at any other size the portal asks for, open the game with `?cover=1` in a browser window of that size.
+
+## 10. Links you need to provide
+- **Privacy policy URL:** host `public/privacy.html` (it's included in the web build, so on itch.io it's at `…/privacy.html`). Or paste the text of `legal/PRIVACY_POLICY.md` into the portal's privacy field, or into a free page such as a Google Site.
+- **Terms URL:** `public/terms.html`
+- **Support email:** {{SUPPORT_EMAIL}}
+- **Website or social:** itch.io page, YouTube channel, Instagram @{{HANDLE}}

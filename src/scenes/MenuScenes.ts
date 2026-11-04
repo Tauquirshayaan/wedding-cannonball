@@ -9,6 +9,8 @@ import { SaveManager } from '../systems/SaveManager';
 import { AudioManager } from '../systems/AudioManager';
 import { Analytics } from '../systems/Analytics';
 import { rupees } from '../systems/DamageTracker';
+import publisher from '../data/publisher.json';
+import pkg from '../../package.json';
 import { platform } from '../platform/Platform';
 import { TOTAL_LEVELS, EndlessRun, levelName } from '../levels';
 import { ENDLESS_BASE, ENDLESS_UNLOCK_AFTER, DAILY_BASE, todayKey } from '../levels/endless';
@@ -289,11 +291,12 @@ export class SettingsScene extends Phaser.Scene {
       SaveManager.reset();
       reset.setText('Progress reset!').setEnabled(false);
     }, { w: 380, h: 54, size: 22, color: 0x5a1020 });
-    new Button(this, GAME_W / 2, 560, 'Back', () => {
+    new Button(this, GAME_W / 2 - 120, 560, 'Back', () => {
       SaveManager.persist();
       this.scene.stop();
       if (data.from === 'Title') this.scene.start('Title'); else this.scene.resume(data.from);
-    }, { w: 220, h: 60, size: 28 });
+    }, { w: 200, h: 60, size: 26 });
+    new Button(this, GAME_W / 2 + 120, 560, 'About', () => { SaveManager.persist(); this.scene.stop(); this.scene.launch('About', { from: data.from }); this.scene.bringToTop('About'); }, { w: 200, h: 60, size: 26, color: 0x2f6db5 });
   }
 
   private slider(y: number, label: string, value: number, onChange: (v: number) => void) {
@@ -584,5 +587,39 @@ export class CoverScene extends Phaser.Scene {
     } else {
       t('HUMAN CANNONBALL', h * 0.17, 96, '#f4c430'); t('WEDDING EDITION', h * 0.17 + 95 * k, 54, '#ff7eb6');
     }
+  }
+}
+
+// ---------------------------------------------------------------- About & credits (no outbound links: portals forbid them)
+export class AboutScene extends Phaser.Scene {
+  constructor() { super('About'); }
+  create(data: { from: string }) {
+    centerSafeArea(this);
+    dimmer(this, 0.7);
+    panel(this, GAME_W / 2, GAME_H / 2, 860, 640);
+    title(this, GAME_W / 2, 92, 'About & Credits', 44);
+    const back = () => { this.scene.stop(); this.scene.launch('Settings', { from: data.from }); this.scene.bringToTop('Settings'); };
+    closeButton(this, GAME_W / 2 + 392, 76, back);
+    this.input.keyboard?.once('keydown-ESC', back);
+    const lines = [
+      `Human Cannonball: Wedding Edition  ·  version ${pkg.version}`,
+      `Made by ${publisher.developer}${publisher.email ? `  ·  ${publisher.email}` : ''}`,
+      '',
+      'Privacy: no account, no personal data collected, no tracking.',
+      'Progress is saved on your device (or in your platform account\'s cloud save).',
+      'On game platforms, ads are shown by the platform under its own privacy policy.',
+      '',
+      'Credits',
+      'Game design, art, music and code: original work.',
+      'Engine: Phaser 3 (MIT licence) with Matter.js physics (MIT licence).',
+      'Sound effects: Universfield, freesound_community, VoiceBosch (Pixabay Content License).',
+      '',
+      'All characters are fictional. Cartoon slapstick only. No religious content.',
+      'Full privacy policy, terms and licences are on the game\'s store page.',
+    ];
+    lines.forEach((t, i) => this.add.text(GAME_W / 2, 150 + i * 30, t, {
+      fontFamily: FONT, fontSize: i === 7 ? '24px' : '19px', color: i === 0 || i === 7 ? '#f4c430' : '#ffe9b8', fontStyle: i === 0 || i === 7 ? 'bold' : 'normal', align: 'center',
+    }).setOrigin(0.5));
+    new Button(this, GAME_W / 2, 630, 'Back', back, { w: 220, h: 58, size: 26 });
   }
 }

@@ -17,7 +17,8 @@
     "serve": "node scripts/serve.mjs dist/web 8080",
     "loadtest": "node scripts/loadtest.mjs http://localhost:8080 1000",
     "voices": "node scripts/make-voices.mjs",
-    "test:e2e": "node scripts/e2e.cjs"
+    "test:e2e": "node scripts/e2e.cjs",
+    "legal": "node scripts/legal.mjs"
   },
   "dependencies": {
     "phaser": "^3.90.0"
