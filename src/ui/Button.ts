@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { FONT } from '../config';
 import { AudioManager } from '../systems/AudioManager';
+import { platform } from '../platform/Platform';
 
 export interface ButtonOpts {
   w?: number; h?: number; color?: number; textColor?: string; size?: number; icon?: string;
@@ -92,7 +93,7 @@ export function closeButton(scene: Phaser.Scene, x: number, y: number, onClose: 
 
 /** ⛶ full-screen toggle, shown only where the browser supports it. */
 export function fullscreenButton(scene: Phaser.Scene, x: number, y: number) {
-  if (!scene.scale.fullscreen.available) return null;
+  if (!scene.scale.fullscreen.available || platform.ownFullscreen) return null;
   const g = scene.add.graphics();
   const draw = () => {
     g.clear();

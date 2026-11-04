@@ -24,7 +24,7 @@ export class HudScene extends Phaser.Scene {
   constructor() { super('Hud'); }
 
   create() {
-    centerSafeArea(this);
+    centerSafeArea(this, undefined, true); // HUD hugs the top edge on tall and portrait screens
     this.icons = []; this.gift = null; this.dmgShown = 0; this.dmgTarget = 0;
     this.root = this.add.container(0, 0);
     // top bar

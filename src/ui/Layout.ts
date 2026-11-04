@@ -6,15 +6,15 @@ import { GAME_W, GAME_H } from '../config';
  * least 1280×720 and wider or taller on other screen shapes. Menus and the HUD are designed for a
  * 1280×720 "safe area" that is kept centred; gameplay simply shows more of the world.
  */
-export function safeArea(scene: Phaser.Scene) {
+export function safeArea(scene: Phaser.Scene, anchorTop = false) {
   const w = scene.scale.width, h = scene.scale.height;
-  return { w, h, ox: (w - GAME_W) / 2, oy: (h - GAME_H) / 2 };
+  return { w, h, ox: (w - GAME_W) / 2, oy: anchorTop ? 0 : (h - GAME_H) / 2 };
 }
 
 /** Keeps the 1280×720 design centred on any screen shape, also after rotation or resize. */
-export function centerSafeArea(scene: Phaser.Scene, after?: () => void) {
+export function centerSafeArea(scene: Phaser.Scene, after?: () => void, anchorTop = false) {
   const apply = () => {
-    const s = safeArea(scene);
+    const s = safeArea(scene, anchorTop);
     const cam = scene.cameras.main;
     cam.setSize(s.w, s.h);
     cam.setScroll(-s.ox, -s.oy);

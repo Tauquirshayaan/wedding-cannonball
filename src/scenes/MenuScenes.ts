@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_W, GAME_H, GROUND_Y, FONT } from '../config';
 import { generateCoreTextures } from '../art/Textures';
 import { makeAllOutfits, themeFor, OUTFITS, outfitUnlocked } from '../art/Themes';
+import { makeDecorTextures } from '../art/Decor';
 import { Button, panel, title, closeButton, fullscreenButton } from '../ui/Button';
 import { centerSafeArea, dimmer, isTouchDevice, enterFullscreen } from '../ui/Layout';
 import { SaveManager } from '../systems/SaveManager';
@@ -93,7 +94,10 @@ export class PreloadScene extends Phaser.Scene {
         // ?level=N jumps straight into a level (handy for phone testing)
         let jump = 0;
         try { jump = Number(new URLSearchParams(window.location.search).get('level')) || 0; } catch { /* ignore */ }
-        if (jump >= 1 && jump <= TOTAL_LEVELS) this.scene.start('Game', { levelId: jump });
+        let cover = false;
+        try { cover = new URLSearchParams(window.location.search).has('cover'); } catch { /* ignore */ }
+        if (cover) this.scene.start('Cover');
+        else if (jump >= 1 && jump <= TOTAL_LEVELS) this.scene.start('Game', { levelId: jump });
         else this.scene.start('Title');
       });
     });
@@ -135,6 +139,9 @@ export class TitleScene extends Phaser.Scene {
     new Button(this, GAME_W / 2 + 120, 500, 'Settings', () => { this.scene.pause(); this.scene.launch('Settings', { from: 'Title' }); }, { w: 220, h: 60, size: 26, color: 0x7a1c2e });
     soundToggle(this, GAME_W - 56, 56);
     fullscreenButton(this, GAME_W - 136, 56);
+    if (platform.portrait && this.scale.height > this.scale.width) {
+      this.add.text(GAME_W / 2, 600, '↻ Tip: turn your phone sideways for a bigger view', { fontFamily: FONT, fontSize: '26px', color: '#ffe9b8', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 5 }).setOrigin(0.5);
+    }
     if (platform.name === 'web' && isTouchDevice()) this.input.once('pointerup', () => enterFullscreen(this));
     const stars = SaveManager.totalStars();
     if (stars > 0) this.add.text(56, 56, `★ ${stars}/30`, { fontFamily: FONT, fontSize: '28px', color: '#f4c430', fontStyle: 'bold', stroke: '#2a1420', strokeThickness: 6 }).setOrigin(0, 0.5);
@@ -377,8 +384,8 @@ export class ResultScene extends Phaser.Scene {
       this.add.text(GAME_W / 2, 476, `All ${TOTAL_LEVELS} levels done! Shaadi Mubarak!`, { fontFamily: FONT, fontSize: '22px', color: '#7dff9a', fontStyle: 'bold' }).setOrigin(0.5);
     }
     buttons.push(new Button(this, GAME_W / 2 - 130, by + 92, 'Levels', () => { this.scene.stop('Hud'); this.scene.stop('Game'); this.scene.start('LevelSelect'); }, { w: 220, h: 60, size: 26, color: 0x7a1c2e }));
-    const share = new Button(this, GAME_W / 2 + 130, by + 92, 'Share', () => void this.share(d, share), { w: 220, h: 60, size: 26, color: 0x3e9b3a });
-    buttons.push(share);
+    const share = !platform.allowShare ? null : new Button(this, GAME_W / 2 + 130, by + 92, 'Share', () => share && void this.share(d, share), { w: 220, h: 60, size: 26, color: 0x3e9b3a });
+    if (share) buttons.push(share);
     this.input.keyboard?.once('keydown-R', () => { void go(d.levelId); });
     if (hasNext) this.input.keyboard?.once('keydown-ENTER', () => { void go(d.levelId + 1); });
   }
@@ -409,8 +416,8 @@ export class ResultScene extends Phaser.Scene {
       startLevel(this, d.levelId);
     }, { w: 300, h: 74, size: 32, color: d.cleared ? 0xf7a21b : 0xe6197e }));
     buttons.push(new Button(this, GAME_W / 2 - 130, 622, 'Levels', () => { this.scene.stop('Hud'); this.scene.stop('Game'); this.scene.start('LevelSelect'); }, { w: 220, h: 60, size: 26, color: 0x7a1c2e }));
-    const share = new Button(this, GAME_W / 2 + 130, 622, 'Share', () => void this.share(d, share), { w: 220, h: 60, size: 26, color: 0x3e9b3a });
-    buttons.push(share);
+    const share = !platform.allowShare ? null : new Button(this, GAME_W / 2 + 130, 622, 'Share', () => share && void this.share(d, share), { w: 220, h: 60, size: 26, color: 0x3e9b3a });
+    if (share) buttons.push(share);
   }
 
   /** Result screen for an Endless Baraat round. */
@@ -454,8 +461,8 @@ export class ResultScene extends Phaser.Scene {
       this.input.keyboard?.once('keydown-R', () => void go(() => newEndlessRun(this)));
     }
     buttons.push(new Button(this, GAME_W / 2 - 130, by + 92, 'Levels', () => { this.scene.stop('Hud'); this.scene.stop('Game'); this.scene.start('LevelSelect'); }, { w: 220, h: 60, size: 26, color: 0x7a1c2e }));
-    const share = new Button(this, GAME_W / 2 + 130, by + 92, 'Share', () => void this.share(d, share), { w: 220, h: 60, size: 26, color: 0x3e9b3a });
-    buttons.push(share);
+    const share = !platform.allowShare ? null : new Button(this, GAME_W / 2 + 130, by + 92, 'Share', () => share && void this.share(d, share), { w: 220, h: 60, size: 26, color: 0x3e9b3a });
+    if (share) buttons.push(share);
   }
 
   private async share(d: ResultData, btn: Button) {
@@ -535,5 +542,47 @@ export class WardrobeScene extends Phaser.Scene {
     new Button(this, 110, 660, '◀ Back', () => this.scene.start(data.from === 'LevelSelect' ? 'LevelSelect' : 'Title'), { w: 170, h: 60, size: 26, color: 0x7a1c2e });
     closeButton(this, GAME_W - 50, 56, () => this.scene.start(data.from === 'LevelSelect' ? 'LevelSelect' : 'Title'));
     this.input.keyboard?.once('keydown-ESC', () => this.scene.start(data.from === 'LevelSelect' ? 'LevelSelect' : 'Title'));
+  }
+}
+
+// ---------------------------------------------------------------- Store cover art (open with ?cover=1 at the target size)
+export class CoverScene extends Phaser.Scene {
+  constructor() { super('Cover'); }
+  create() {
+    makeDecorTextures(this);
+    const w = this.scale.width, h = this.scale.height;
+    const portrait = h > w * 1.1;
+    const k = Math.min(w / 1280, h / 720) * (portrait ? 1.35 : 1);
+    this.add.image(w / 2, h / 2, 'sky').setScale(Math.max(w / 640, h / 360) * 1.05);
+    const gy = h - 90 * k;
+    this.add.tileSprite(0, gy - 300 * k, w, 330, 'bg_near').setOrigin(0).setScale(1, k).setTileScale(k);
+    this.add.tileSprite(0, gy - 11 * k, w, 400, 'ground').setOrigin(0).setTileScale(k);
+    const s = (img: Phaser.GameObjects.Image, sc = 1) => img.setScale(k * sc);
+    // stage on the right, crowd, balloons
+    s(this.add.image(w - 150 * k, gy, 'flower_pillar').setOrigin(0.5, 1), 1.3);
+    s(this.add.image(w - 300 * k, gy + 4 * k, 'balloons').setOrigin(0.5, 1), 1.2);
+    s(this.add.image(w * 0.62, gy, 'uncle_0').setOrigin(0.5, 1), 1.4);
+    s(this.add.image(w * 0.62 + 90 * k, gy, 'aunty_1').setOrigin(0.5, 1), 1.4);
+    s(this.add.image(w * 0.45, gy, 'photographer_0').setOrigin(0.5, 1).setFlipX(true), 1.4);
+    // cannon firing, bottom-left
+    s(this.add.image(150 * k, gy - 50 * k, 'cannon_barrel').setOrigin(26 / 136, 0.5).setRotation(-0.75), 1.6);
+    s(this.add.image(150 * k, gy - 30 * k, 'cannon_base'), 1.6);
+    const smoke = this.add.particles(0, 0, 'px_smoke', { lifespan: 4000, speed: 0, scale: { start: 2.5 * k, end: 2.5 * k }, alpha: 0.7, emitting: false });
+    smoke.explode(6, 290 * k, gy - 190 * k);
+    // Lucky flying, arms out, scared
+    const lx = portrait ? w * 0.55 : w * 0.5, ly = portrait ? h * 0.55 : h * 0.47, L = 2.6 * k;
+    const part = (tex: string, dx: number, dy: number, rot: number) => this.add.image(lx + dx * L, ly + dy * L, tex).setScale(L).setRotation(rot);
+    part('leg_s2', -8, 32, 0.5); part('leg_s2', 8, 30, -0.3); part('arm_s2', 22, -14, -2.2);
+    part('torso_s2', 0, 0, 0.25); part('head_scared', 6, -34, 0.3); part('pagdi_s2', 12, -52, 0.6); part('arm_s2', -22, -12, 2.4);
+    for (let i = 0; i < 5; i++) this.add.image(lx - (60 + i * 45) * L * 0.4, ly + (20 + i * 26) * L * 0.4, 'px_dot').setScale(L * (1.6 - i * 0.25)).setAlpha(0.8 - i * 0.12);
+    // title
+    const t = (text: string, y: number, size: number, color: string) => this.add.text(w / 2, y, text, {
+      fontFamily: FONT, fontSize: `${Math.round(size * k)}px`, color, fontStyle: 'bold', stroke: '#2a1420', strokeThickness: Math.round(size * k / 6), align: 'center',
+    }).setOrigin(0.5);
+    if (portrait) {
+      t('HUMAN', h * 0.11, 96, '#f4c430'); t('CANNONBALL', h * 0.11 + 100 * k, 96, '#f4c430'); t('WEDDING EDITION', h * 0.11 + 190 * k, 54, '#ff7eb6');
+    } else {
+      t('HUMAN CANNONBALL', h * 0.17, 96, '#f4c430'); t('WEDDING EDITION', h * 0.17 + 95 * k, 54, '#ff7eb6');
+    }
   }
 }

@@ -14,6 +14,12 @@ export interface Platform {
   name: string;
   /** Portal pages must not link out to other sites. */
   allowExternalLinks: boolean;
+  /** The portal provides its own full-screen control, so the game hides its ⛶ button. */
+  ownFullscreen: boolean;
+  /** Sharing results outside the platform is allowed. */
+  allowShare: boolean;
+  /** The game must also play in portrait (no rotate-your-phone block). */
+  portrait: boolean;
   init(): Promise<void>;
   loadingProgress(p: number): void;
   loadingDone(): void;
@@ -61,6 +67,9 @@ function loadScript(src: string, timeoutMs = 6000): Promise<boolean> {
 class WebPlatform implements Platform {
   name = 'web';
   allowExternalLinks = true;
+  ownFullscreen = false;
+  allowShare = true;
+  portrait = false;
   protected inGameplay = false;
   async init() {}
   loadingProgress() {}
@@ -83,6 +92,7 @@ class WebPlatform implements Platform {
 class PokiPlatform extends WebPlatform {
   name = 'poki';
   allowExternalLinks = false;
+  ownFullscreen = true;
   private ok = false;
   async init() {
     const loaded = await loadScript('https://game-cdn.poki.com/scripts/v2/poki-sdk.js');
@@ -118,6 +128,7 @@ class PokiPlatform extends WebPlatform {
 class CrazyGamesPlatform extends WebPlatform {
   name = 'crazygames';
   allowExternalLinks = false;
+  ownFullscreen = true;
   private sdk: any = null;
   async init() {
     const loaded = await loadScript('https://sdk.crazygames.com/crazygames-sdk-v3.js');
@@ -174,6 +185,9 @@ class CrazyGamesPlatform extends WebPlatform {
 class YouTubePlatform extends WebPlatform {
   name = 'youtube';
   allowExternalLinks = false;
+  ownFullscreen = true;
+  allowShare = false;
+  portrait = true;
   private yt: any = null;
   async init() {
     if (!window.ytgame) await loadScript('https://www.youtube.com/game_api/v1');

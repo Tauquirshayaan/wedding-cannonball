@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_W, GAME_H } from './config';
-import { PreloadScene, TitleScene, LevelSelectScene, PauseScene, SettingsScene, ResultScene, WardrobeScene } from './scenes/MenuScenes';
+import { PreloadScene, TitleScene, LevelSelectScene, PauseScene, SettingsScene, ResultScene, WardrobeScene, CoverScene } from './scenes/MenuScenes';
 import { GameScene } from './scenes/GameScene';
 import { HudScene } from './scenes/HudScene';
 import { platform, onAdPause, onAdResume } from './platform/Platform';
@@ -14,6 +14,8 @@ window.addEventListener('keydown', (e) => {
 
 async function boot() {
   await platform.init();
+  // YouTube Playables open in portrait inside the app: play there too instead of blocking with "rotate your phone"
+  if (platform.portrait) document.body.classList.remove('need-landscape');
   await SaveManager.load();
   const d = SaveManager.data;
   AudioManager.configure(d.sfx, d.music, d.muted);
@@ -30,7 +32,7 @@ async function boot() {
     render: { antialias: true, powerPreference: 'high-performance' },
     fps: { target: 60 },
     banner: false,
-    scene: [PreloadScene, TitleScene, LevelSelectScene, GameScene, HudScene, PauseScene, SettingsScene, ResultScene, WardrobeScene],
+    scene: [PreloadScene, TitleScene, LevelSelectScene, GameScene, HudScene, PauseScene, SettingsScene, ResultScene, WardrobeScene, CoverScene],
   });
   (window as unknown as { __hcGame: Phaser.Game }).__hcGame = game;
 

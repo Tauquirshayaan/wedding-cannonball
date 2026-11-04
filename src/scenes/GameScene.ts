@@ -121,7 +121,7 @@ export class GameScene extends Phaser.Scene {
     this.add.tileSprite(-600, GROUND_Y - 290, L.width + 3000, 300, tk.far).setOrigin(0).setScrollFactor(0.2, 0.35).setDepth(-9);
     this.add.tileSprite(-600, GROUND_Y - 320, L.width + 3000, 330, tk.near).setOrigin(0).setScrollFactor(0.5, 0.7).setDepth(-8);
     this.add.tileSprite(-1200, GROUND_Y - 11, L.width + 2400, 120, tk.ground).setOrigin(0).setDepth(2);
-    this.add.rectangle(-1200, GROUND_Y + 108, L.width + 2400, 900, 0x245e2a).setOrigin(0).setDepth(2);
+    this.add.rectangle(-3000, GROUND_Y + 108, L.width + 6000, 6000, 0x245e2a).setOrigin(0).setDepth(2);
     // red carpet from cannon to stage
     const carpet = this.add.graphics().setDepth(3);
     carpet.fillStyle(theme.carpet, 1);
@@ -241,13 +241,14 @@ export class GameScene extends Phaser.Scene {
     const halfW = this.scale.width / 2 / z, halfH = this.scale.height / 2 / z;
     const w = this.level.width;
     const x = w < halfW * 2 ? w / 2 : Phaser.Math.Clamp(this.cam.x, halfW, w - halfW);
-    const y = Phaser.Math.Clamp(this.cam.y, -1600 + halfH, GAME_H - halfH);
+    // very tall (portrait) views show more than the world's height: keep the ground ~70% down the screen
+    const y = halfH * 2 > 2300 ? GROUND_Y + halfH * 0.6 - halfH : Phaser.Math.Clamp(this.cam.y, -1600 + halfH, GAME_H - halfH);
     c.centerOn(x, y);
   }
 
   // ---------------- input ----------------
   private inHudZone(p: Phaser.Input.Pointer) {
-    const s = safeArea(this); // the HUD sits in the centred 1280×720 safe area
+    const s = safeArea(this, true); // the HUD sits in the 1280-wide safe area, anchored to the top
     const x = p.x - s.ox, y = p.y - s.oy;
     return y < 96 && (x < 360 || x > GAME_W - 200);
   }

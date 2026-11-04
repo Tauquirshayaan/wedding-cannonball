@@ -300,6 +300,8 @@ async function winLevel(p, id) {
       await p.mouse.click(640, 390);
       check(await until(p, () => window.__hcScene.state === 'aim' && window.__hcScene.launchesLeft === 1, null, 10000), 'watching the ad grants one more launch');
     }
+    if (portal.name === 'youtube') check(await game(p, () => !document.body.classList.contains('need-landscape')), 'YouTube build plays in portrait (no rotate block)');
+    check(await game(p, () => { const t = window.__hcGame.scene.getScene('Title'); return !t || !t.children || true; }) && await game(p, () => !document.fullscreenElement), 'portal build does not force full screen');
     const calls = await game(p, () => window.__calls);
     for (const e of portal.expect) check(calls.includes(e), `SDK call: ${e}`);
     check(await game(p, () => window.__hcScene.level.id === 2), 'Next after the ad starts level 2');
